@@ -17,6 +17,7 @@ typedef struct {
 #define newMemoryFrame GetMemoryFrame(upperHeap)
 
 
+
 class ThreadMemory
 {
 private:

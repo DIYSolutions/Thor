@@ -41,6 +41,7 @@ inline void ShutdownFrameMemorySystem(void) {
 	free(_pMemoryBlock);
 }
 
+
 template <HEAPNUM nHeapNum>
 inline void* AllocFrameMemory(int nBytes) {
 }

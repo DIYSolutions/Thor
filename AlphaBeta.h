@@ -689,6 +689,7 @@ private:
 				temp->blockingBB = getRay(pinDir, myKing_sq) & getRay(getOppositeDir(pinDir), attack_sq) & ClearMask[fromSQ];
 				temp->next = PinsBySquare[fromSQ];
 				PinsBySquare[fromSQ] = temp;
+				pinnedPiecesBB |= SetMask[fromSQ];
 			}
 
 			SetBit(&allPiecesBB, fromSQ);
@@ -708,6 +709,7 @@ private:
 				temp->blockingBB = getRay(pinDir, myKing_sq) & getRay(getOppositeDir(pinDir), attack_sq) & ClearMask[fromSQ];
 				temp->next = PinsBySquare[fromSQ];
 				PinsBySquare[fromSQ] = temp;
+				pinnedPiecesBB |= SetMask[fromSQ];
 			}
 
 			SetBit(&allPiecesBB, fromSQ);
@@ -812,7 +814,7 @@ private:
 		while (piecesBB) {
 			fromSQ = PopBit(&piecesBB);
 			MyAttackBB |= magicGetRookAttackBB(fromSQ, allPiecesBB);
-			getPinByAttackSQ<WHITE, false>(fromSQ, PinsBySquare);
+			//getPinByAttackSQ<WHITE, false>(fromSQ, PinsBySquare);
 		}
 	}
 	template <>
@@ -829,7 +831,7 @@ private:
 				checkersType = WhiteRook;
 			}
 			EnAttackBB |= PieceAttacksBB;
-			getPinByAttackSQ<WHITE, false>(fromSQ, PinsBySquare);
+			//getPinByAttackSQ<WHITE, false>(fromSQ, PinsBySquare);
 		}
 	}
 
@@ -840,7 +842,7 @@ private:
 		while (piecesBB) {
 			fromSQ = PopBit(&piecesBB);
 			MyAttackBB |= magicGetQueenAttackBB(fromSQ, allPiecesBB);
-			getPinByAttackSQ<WHITE, false>(fromSQ, PinsBySquare);
+			//getPinByAttackSQ<WHITE, false>(fromSQ, PinsBySquare);
 		}
 	}
 	template <>
@@ -857,24 +859,24 @@ private:
 				checkersType = WhiteQueen;
 			}
 			EnAttackBB |= PieceAttacksBB;
-			getPinByAttackSQ<WHITE, false>(fromSQ, PinsBySquare);
+			//getPinByAttackSQ<WHITE, false>(fromSQ, PinsBySquare);
 		}
 	}
 
 	template <>
 	inline void getPieceTypeAttackBB<WHITE, WhiteKing>(U64 piecesBB, S_PinnedPiece* PinsBySquare) {
-		getPieceTypeAttackBB<WHITE, BlackPawn>(gameboard->piecesBB[BlackPawn], PinsBySquare);
+		//getPieceTypeAttackBB<WHITE, BlackPawn>(gameboard->piecesBB[BlackPawn], PinsBySquare);
 
 		MyAttackBB |= AttackBrdKingBB[myKing_sq];
 		getPinByAttackSQ<WHITE, true>(myKing_sq, PinsBySquare);
 	}
 	template <>
 	inline void getPieceTypeAttackBB<BLACK, WhiteKing>(U64 piecesBB, S_PinnedPiece* PinsBySquare) {
-		getPieceTypeAttackBB<BLACK, BlackPawn>(gameboard->piecesBB[BlackPawn], PinsBySquare);
+		//getPieceTypeAttackBB<BLACK, BlackPawn>(gameboard->piecesBB[BlackPawn], PinsBySquare);
 
 		fromSQ = PopBit(&piecesBB);
 		EnAttackBB |= AttackBrdKingBB[fromSQ];
-		getPinByAttackSQ<WHITE, true>(fromSQ, PinsBySquare);
+		//getPinByAttackSQ<WHITE, true>(fromSQ, PinsBySquare);
 		SetBit(&allPiecesBB, myKing_sq);// put king back
 	}
 
@@ -964,7 +966,7 @@ private:
 				checkersType = BlackRook;
 			}
 			EnAttackBB |= PieceAttacksBB;
-			getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
+			//getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
 
 		}
 	}
@@ -975,7 +977,7 @@ private:
 		while (piecesBB) {
 			fromSQ = PopBit(&piecesBB);
 			MyAttackBB |= magicGetRookAttackBB(fromSQ, allPiecesBB);
-			getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
+			//getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
 		}
 	}
 
@@ -993,7 +995,7 @@ private:
 				checkersType = BlackQueen;
 			}
 			EnAttackBB |= PieceAttacksBB;
-			getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
+			//getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
 		}
 	}
 	template <>
@@ -1003,7 +1005,7 @@ private:
 		while (piecesBB) {
 			fromSQ = PopBit(&piecesBB);
 			MyAttackBB |= magicGetQueenAttackBB(fromSQ, allPiecesBB);
-			getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
+			//getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
 		}
 	}
 
@@ -1011,7 +1013,7 @@ private:
 	inline void getPieceTypeAttackBB<WHITE, BlackKing>(U64 piecesBB, S_PinnedPiece* PinsBySquare) {
 		fromSQ = PopBit(&piecesBB);
 		EnAttackBB |= AttackBrdKingBB[fromSQ];
-		getPinByAttackSQ<WHITE, true>(fromSQ, PinsBySquare);
+		//getPinByAttackSQ<WHITE, true>(fromSQ, PinsBySquare);
 		SetBit(&allPiecesBB, myKing_sq);// put king back
 	}
 	template <>
@@ -1052,7 +1054,7 @@ private:
 	U64 pinnedPiecesBB = 0ULL, pinnedEnemyPiecesBB = 0ULL, notPinnedPiecesBB = 0ULL;
 	U64 kingBishopAttackBB = 0ULL, kingRookAttackBB = 0ULL;
 
-	U64 tempAttackBB = 0ULL;
+	U64 tempAttackBB = 0ULL, tempBB = 0ULL;
 	short checkerSQ = 0;
 	short checkerType = 0;
 
@@ -1064,9 +1066,101 @@ private:
 	bool opening = false;
 	bool inCheck = false;
 
-	S_PinnedPiece* MyPinnedPieces = nullptr;
-	S_PinnedPiece* EnPinnedPieces = nullptr;
 #endif
+
+	/*
+		obtain moves by given destination square
+	*/
+	template <Colors Us, bool Capture>
+	U64* getMove2givenSQ(const short toSQ, const S_PinnedPiece* PinsBySquare, U64* MovePtr, const short captureType) {
+
+		constexpr Pieces myPAWN = Us == WHITE ? WhitePawn : BlackPawn;
+		constexpr Pieces myKNIGHT = Us == WHITE ? WhiteKnight : BlackKnight;
+		constexpr Pieces myBISHOP = Us == WHITE ? WhiteBishop : BlackBishop;
+		constexpr Pieces myROOK = Us == WHITE ? WhiteRook : BlackRook;
+		constexpr Pieces myQUEEN = Us == WHITE ? WhiteQueen : BlackQueen;
+		constexpr Pieces myKING = Us == WHITE ? WhiteKing : BlackKing;
+
+		kingBishopAttackBB = magicGetBishopAttackBB(toSQ, allPiecesBB);
+		kingRookAttackBB = magicGetRookAttackBB(toSQ, allPiecesBB);
+
+		tempBB = kingBishopAttackBB & gameboard->piecesBB[myBISHOP];
+		while (tempBB) {
+			fromSQ = PopBit(&tempBB);
+			if (PinsBySquare[fromSQ]) {
+				if (PinsBySquare[fromSQ].blockingBB & SetMask[toSQ])
+					NEW_MOVE(MovePtr,
+						MOVE_NEW(fromSQ, toSQ, myBISHOP, captureType, Empty, Capture ? PremoveBBCapture : PremoveBBNormalExec)
+						, 100);
+			}
+			else {
+				NEW_MOVE(MovePtr,
+					MOVE_NEW(fromSQ, toSQ, myBISHOP, captureType, Empty, Capture ? PremoveBBCapture : PremoveBBNormalExec)
+					, 100);
+			}
+		}
+
+		tempBB = kingRookAttackBB & gameboard->piecesBB[myROOK];
+		while (tempBB) {
+			fromSQ = PopBit(&tempBB);
+			if (PinsBySquare[fromSQ]) {
+				if (PinsBySquare[fromSQ].blockingBB & SetMask[toSQ])
+					NEW_MOVE(MovePtr,
+						MOVE_NEW(fromSQ, toSQ, myROOK, captureType, Empty, Capture ? PremoveBBCapture : PremoveBBNormalExec)
+						, 100);
+			}
+			else {
+				NEW_MOVE(MovePtr,
+					MOVE_NEW(fromSQ, toSQ, myROOK, captureType, Empty, Capture ? PremoveBBCapture : PremoveBBNormalExec)
+					, 100);
+			}
+		}
+
+		tempBB = (kingBishopAttackBB | kingRookAttackBB) & gameboard->piecesBB[myQUEEN];
+		while (tempBB) {
+			fromSQ = PopBit(&tempBB);
+			if (PinsBySquare[fromSQ]) {
+				if (PinsBySquare[fromSQ].blockingBB & SetMask[toSQ])
+					NEW_MOVE(MovePtr,
+						MOVE_NEW(fromSQ, toSQ, myQUEEN, captureType, Empty, Capture ? PremoveBBCapture : PremoveBBNormalExec)
+						, 100);
+			}
+			else {
+				NEW_MOVE(MovePtr,
+					MOVE_NEW(fromSQ, toSQ, myQUEEN, captureType, Empty, Capture ? PremoveBBCapture : PremoveBBNormalExec)
+					, 100);
+			}
+		}
+
+		if (Capture) {
+
+			tempBB = AttackBrdKnightBB[toSQ] & gameboard->piecesBB[myKNIGHT];
+			while (tempBB) {
+				fromSQ = PopBit(&tempBB);
+				if (PinsBySquare[fromSQ])
+					continue;
+
+				NEW_MOVE(MovePtr,
+					MOVE_NEW(fromSQ, toSQ, myKNIGHT, captureType, Empty, PremoveBBCapture)
+					, 100);
+			}
+		}
+		else {
+
+			tempBB = AttackBrdKnightBB[toSQ] & gameboard->piecesBB[myKNIGHT];
+			while (tempBB) {
+				fromSQ = PopBit(&tempBB);
+				if (PinsBySquare[fromSQ])
+					continue;
+
+				NEW_MOVE(MovePtr,
+					MOVE_NEW(fromSQ, toSQ, myKNIGHT, Empty, Empty, PremoveBBNormalExec)
+					, 100);
+			}
+		}
+	}
+
+
 	//TODO get pinned pieces
 	/*
 		genrates and sort moves
@@ -1119,9 +1213,6 @@ private:
 
 		constexpr int(*getPawnDistance)(int, int) = (Us == WHITE ? getWhitePawnDistance : getBlackPawnDistance);
 
-		MyPinnedPieces = nullptr;
-		EnPinnedPieces = nullptr;
-
 		S_PinnedPiece* PinsBySquare[64] = {
 			nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 			nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
@@ -1159,7 +1250,7 @@ private:
 		MyAttackBB = EnAttackBB = CheckersBB = blockingSQ_BB = pinnedPiecesBB = notPinnedPiecesBB = kingBishopAttackBB = kingRookAttackBB = 0ULL;
 		checkersNum = 0;
 
-		getPieceTypeAttackBB<Us, WhitePawn>(gameboard->piecesBB[WhitePawn], PinsBySquare);
+		getPieceTypeAttackBB<Us, enPAWN>(gameboard->piecesBB[enPAWN], PinsBySquare);
 		
 		
 		
@@ -1184,9 +1275,6 @@ private:
 			}
 		}
 		inCheck = CheckersBB != 0ULL;
-
-		kingBishopAttackBB = magicGetBishopAttackBB(myKing_sq, allPiecesBB) & friends;
-		kingRookAttackBB = magicGetRookAttackBB(myKing_sq, allPiecesBB) & friends;
 
 		tempAttackBB = AttackBrdKingBB[myKing_sq] & ~EnAttackBB;
 		//king moves
@@ -1213,7 +1301,14 @@ private:
 				checkerType = getEnPieceType(gameboard->piecesBB, checkerSQ);
 
 				// check for blocking moves by => AttackBoardBB & blockingSQ_BB
+				// check for capture moves by => AttackBoardBB & captureSQ_BB
+				// check for pin by => PinsBySquare[fromSQ] or pinnedPiecesBB
 
+				// if(captureSQ_BB)
+				MovePtr = getMove2givenSQ<Us, true>(PopBit(captureSQ_BB), PinsBySquare, MovePtr, checkerType);
+
+				while (blockingSQ_BB)
+					MovePtr = getMove2givenSQ<Us, false>(PopBit(blockingSQ_BB), PinsBySquare, MovePtr, Empty);
 			}
 		}
 		else {
@@ -1234,8 +1329,89 @@ private:
 								, 100);
 			}
 
+			// myPAWN
+			tempBB = gameboard->piecesBB[myPAWN];
+			if (myPAWN == WhitePawn) {
+				while (tempBB) {
+					fromSQ = PopBit(&tempBB);
+					try {
+						blockingSQ_BB = PinsBySquare[fromSQ]->blockingBB;
+					}
+					catch (...) {
+						blockingSQ_BB = FullBB;
+					}
+
+				}
+
+			}
+			else {
+				while (tempBB) {
+					fromSQ = PopBit(&tempBB);
+					try {
+						blockingSQ_BB = PinsBySquare[fromSQ]->blockingBB;
+					}
+					catch (...) {
+						blockingSQ_BB = FullBB;
+					}
+
+				}
+
+			}
+			// myKNIGHT
+			tempBB = gameboard->piecesBB[myKNIGHT];
+			while (tempBB) {
+				fromSQ = PopBit(&tempBB);
+				try {
+					blockingSQ_BB = PinsBySquare[fromSQ]->blockingBB;
+				}
+				catch (...) {
+					blockingSQ_BB = FullBB;
+				}
+
+			}
+
+			// myBISHOP
+			tempBB = gameboard->piecesBB[myBISHOP];
+			while (tempBB) {
+				fromSQ = PopBit(&tempBB);
+				try {
+					blockingSQ_BB = PinsBySquare[fromSQ]->blockingBB;
+				}
+				catch (...) {
+					blockingSQ_BB = FullBB;
+				}
+
+			}
+
+			// myROOK
+			tempBB = gameboard->piecesBB[myROOK];
+			while (tempBB) {
+				fromSQ = PopBit(&tempBB);
+				try {
+					blockingSQ_BB = PinsBySquare[fromSQ]->blockingBB;
+				}
+				catch (...) {
+					blockingSQ_BB = FullBB;
+				}
+
+			}
+
+			// myQUEEN
+			tempBB = gameboard->piecesBB[myQUEEN];
+			while (tempBB) {
+				fromSQ = PopBit(&tempBB);
+				try {
+					blockingSQ_BB = PinsBySquare[fromSQ]->blockingBB;
+				}
+				catch (...) {
+					blockingSQ_BB = FullBB;
+				}
+
+			}
 
 		}
+
+
 
 
 		if (MaterialDraw(gameboard->fiftyMove, gameboard->piecesBB))

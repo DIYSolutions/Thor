@@ -2,15 +2,11 @@
 //
 
 #include <iostream>
-#include "basic_data.h"
 
 
 int main()
 {
-    std::cout << sizeof(S_Movelist) << std::endl;
-    std::cout << sizeof(U64) << std::endl;
-    std::cout << sizeof(int) << std::endl;
-    std::cout << "Hello World!\n";
+	std::cout << "Hello World!\n";
 }
 
 // Programm ausführen: STRG+F5 oder "Debuggen" > Menü "Ohne Debuggen starten"

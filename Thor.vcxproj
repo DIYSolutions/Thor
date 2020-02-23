@@ -147,7 +147,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="basic_data.cpp" />
     <ClCompile Include="Thor.cpp" />
   </ItemGroup>
   <ItemGroup>

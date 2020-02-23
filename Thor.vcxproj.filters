@@ -18,9 +18,6 @@
     <ClCompile Include="Thor.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="basic_data.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="basic_data.h">

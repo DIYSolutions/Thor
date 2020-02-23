@@ -1,9 +1,6 @@
 #pragma once
-constexpr short int_Size = sizeof(int);
 typedef unsigned long long U64;
-constexpr short U64_Size = sizeof(U64);
 typedef signed short BoardValue;
-constexpr short BoardValue_Size = sizeof(BoardValue);
 
 void error_exit(const char* err);
 void error_exit(const char* condition, const char* date, const char* time, const char* file, int line_nr);
@@ -28,7 +25,7 @@ void print_console_str(const char* line, char* str);
 #endif
 
 typedef enum Colors {
-	BLACK = 0, WHITE = 1
+	BLACK, WHITE
 } Colors;
 
 typedef enum Files {
@@ -65,7 +62,6 @@ typedef struct S_Chessboard {
 
 	U64 PvArray[SEARCH_MAX_MOVES];
 } S_Chessboard;
-constexpr short Chessboard_Size = sizeof(S_Chessboard);
 
 constexpr signed short MIN_INFINTE = -32765;
 constexpr signed short MAX_INFINTE = 32765;// 100 = one pawn
@@ -93,7 +89,6 @@ typedef struct S_Movelist {
 	U64 Move;
 	BoardValue Score;
 } S_Movelist;
-constexpr short Movelist_Size = sizeof(S_Movelist);
 
 /// hash
 constexpr U64 PieceKeys[13][64] = {

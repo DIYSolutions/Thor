@@ -149,18 +149,6 @@
   <ItemGroup>
     <ClCompile Include="Thor.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="AlphaBeta.h" />
-    <ClInclude Include="basic_data.h" />
-    <ClInclude Include="bitboard.h" />
-    <ClInclude Include="bitboard_attackboards.h" />
-    <ClInclude Include="board.h" />
-    <ClInclude Include="DoubleLinkedList.h" />
-    <ClInclude Include="frame_memory.h" />
-    <ClInclude Include="hash.h" />
-    <ClInclude Include="move_data.h" />
-    <ClInclude Include="ThreadMemory.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

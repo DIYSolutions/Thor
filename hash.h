@@ -1,5 +1,5 @@
 #pragma once
-#include "basic.h"
+#include "memory_basic.h"
 
 /// hash
 constexpr U64 PieceKeys[13][64] = {
@@ -38,7 +38,225 @@ constexpr U64 CastleKeys[16] = {
 
 //// hash
 
-#define HASH_PCE(pce,sq) PosKey ^= PieceKeys[pce][sq]
-#define HASH_CA PosKey ^= CastleKeys[CastlePerm]
-#define HASH_SIDE PosKey ^= SideKey
-#define HASH_EP PosKey ^= PieceKeys[Empty][EnPas]
+
+#include <atomic>
+
+typedef struct S_HASHENTRY {
+	U64 lastWrite = 0ULL;
+	U64 posKey = 0ULL;
+	short depth = 0;
+	BoardValue score = 0;
+	U64 move = 0ULL;
+	short flags = 0;
+	std::atomic_flag lock;
+} S_HASHENTRY;
+
+typedef struct S_HASHTABLE {
+	S_HASHENTRY* entrys = nullptr;
+	std::atomic<U64> numEntries = 0;
+	std::atomic<U64> newWrite = 0;
+	std::atomic<U64> overWrite = 0;
+	std::atomic<U64> hit = 0;
+	std::atomic<U64> cut = 0;
+} S_HASHTABLE;
+
+typedef struct {
+
+	std::atomic<U64> starttime;
+	std::atomic<U64> stoptime;
+	std::atomic<int> depth;
+	std::atomic<int> timeset;
+	std::atomic<int> movestogo;
+
+	std::atomic<U64> nodes;
+
+	std::atomic<bool> quit;
+	std::atomic<bool> stopped;
+
+	std::atomic<int> fh;
+	std::atomic<int> fhf;
+	std::atomic<int> nullCut;
+
+} S_SEARCHINFO;
+
+static S_HASHTABLE* _pHashTable = nullptr;
+static S_SEARCHINFO* _pSearchInfo = nullptr;
+static S_MemoryFrame _MemoryFrame;
+
+typedef enum HashFlags {
+	HFNONE, HFALPHA, HFBETA, HFEXACT
+} HashFlags;
+
+constexpr inline S_HASHENTRY* GET_NEW_HASHENTRY(const U64 posKey) {
+	U64 id = posKey % _pHashTable->numEntries;
+	U64 timeExpire = GetMilliTime() - 30000;
+
+	while (id < _pHashTable->numEntries &&
+		_pHashTable->entrys[id].posKey != 0ULL &&
+		(_pHashTable->entrys[id].posKey != posKey || _pHashTable->entrys[id].lastWrite < timeExpire)
+		)
+		id++;
+
+	return &(_pHashTable->entrys[id]);
+}
+
+constexpr inline S_HASHENTRY* GET_HASHENTRY(const U64 posKey) {
+	U64 id = posKey % _pHashTable->numEntries;
+
+	while (id < _pHashTable->numEntries &&
+		_pHashTable->entrys[id].posKey != 0ULL &&
+		_pHashTable->entrys[id].posKey != posKey
+		)
+		id++;
+
+	return &(_pHashTable->entrys[id]);
+}
+
+inline void ProbeHashEntry(const U64 PosKey, short* depth, BoardValue* score) {
+	S_HASHENTRY* hashEntry = GET_HASHENTRY(PosKey);
+
+	while (hashEntry->lock.test_and_set(std::memory_order_acquire)) // acquire lock
+		; // spin
+
+	if (hashEntry->posKey == PosKey) {
+		*depth = hashEntry->depth;
+		*score = hashEntry->score;
+	}
+	else {
+		*depth = 0;
+	}
+	hashEntry->lock.clear(std::memory_order_release);
+}
+
+inline bool ProbeHashEntry(const U64 PosKey, const short Ply, U64* move, BoardValue* score, const BoardValue alpha, const BoardValue beta, const short depth) {
+	S_HASHENTRY* hashEntry = GET_HASHENTRY(PosKey);
+
+	while (hashEntry->lock.test_and_set(std::memory_order_acquire)) // acquire lock
+		; // spin
+
+	if (hashEntry->posKey == PosKey) {
+		*move = hashEntry->move;
+		if (hashEntry->depth >= depth) {
+			_pHashTable->hit++;
+
+			*score = hashEntry->score;
+			if (*score > MAX_MATE) *score -= Ply;
+			else if (*score < MIN_MATE) *score += Ply;
+
+			short flags = hashEntry->flags;
+			hashEntry->lock.clear(std::memory_order_release);
+			switch (flags) {
+			case HFALPHA:
+				if (*score <= alpha) {
+					*score = alpha;
+					return true;
+				}
+				break;
+			case HFBETA:
+				if (*score >= beta) {
+					*score = beta;
+					return true;
+				}
+				break;
+			case HFEXACT:
+				return true;
+				break;
+			default: ASSERT(false); return false; break;
+			}
+		}
+	}
+
+	hashEntry->lock.clear(std::memory_order_release);
+	return false;
+}
+
+inline void StoreHashEntry(const U64 PosKey, const short Ply, const U64 move, const BoardValue score, const short flags, const short depth) {
+	S_HASHENTRY* hashEntry = GET_NEW_HASHENTRY(PosKey);
+
+	while (hashEntry->lock.test_and_set(std::memory_order_acquire)) // acquire lock
+		; // spin
+
+	hashEntry->lastWrite = GetMilliTime();
+
+	if (hashEntry->posKey == 0ULL)// new write
+		_pHashTable->newWrite++;
+	else if (hashEntry->posKey == PosKey) {// overwrite but same position
+		if (hashEntry->depth > depth)
+			return;// abort if stored depth is greater then new one
+		// new depth is bigger or same
+	}
+	else// overwrite old entry
+		_pHashTable->overWrite++;	
+
+	if (score > MAX_MATE) hashEntry->score = score + Ply;
+	else if (score < MIN_MATE) hashEntry->score = score - Ply;
+	else hashEntry->score = score;
+
+	hashEntry->move = move;
+	hashEntry->posKey = PosKey;
+	hashEntry->flags = flags;
+	hashEntry->depth = depth;
+	hashEntry->lock.clear(std::memory_order_release);
+}
+
+inline U64 ProbePvMove(const U64 posKey) {
+	S_HASHENTRY* hashEntry = GET_HASHENTRY(posKey);
+
+	while (hashEntry->lock.test_and_set(std::memory_order_acquire)) // acquire lock
+		; // spin
+
+	if (hashEntry->posKey == posKey) {
+		hashEntry->lock.clear(std::memory_order_release);
+		return hashEntry->move;
+	}
+	hashEntry->lock.clear(std::memory_order_release);
+	return 0ULL;
+}
+
+
+
+inline void ClearHashTable() {
+	for (U64 i = 0ULL; i < _pHashTable->numEntries; i++) {
+		S_HASHENTRY* tableEntry = &_pHashTable->entrys[i];
+		tableEntry->posKey = tableEntry->move = 0ULL;
+		tableEntry->depth = tableEntry->score = tableEntry->flags = 0;
+
+		tableEntry->lock.clear();
+	}
+	_pHashTable->newWrite = _pHashTable->overWrite = _pHashTable->hit = _pHashTable->cut = 0;
+}
+
+inline void InitSearchinfo() {
+	_pSearchInfo = new S_SEARCHINFO();
+}
+
+inline void InitHashTable(const U64 HashSize) {
+	destroyHashTable();
+	_pHashTable = new S_HASHTABLE();
+
+	_pHashTable->numEntries = HashSize / sizeof(S_HASHENTRY);
+	_pHashTable->numEntries -= 2;
+
+	_MemoryFrame = _GetMemoryFrame(HashHeap);
+	_pHashTable->entrys = (S_HASHENTRY*)_AllocFrameMemory<HashHeap>(((int)_pHashTable->numEntries) * sizeof(S_HASHENTRY));
+	if (_pHashTable->entrys == nullptr) {
+		print_console("Hash Allocation Failed, trying %dBytes...\n", HashSize / 2);
+		InitHashTable(HashSize / 2);
+	}
+	else {
+		ClearHashTable();
+		print_console("HashTable init complete with %d entries\n", (int)_pHashTable->numEntries);
+	}
+}
+
+inline void destroyHashTable() {
+	if (_pHashTable != nullptr) {
+		if (_pHashTable->entrys != nullptr) {
+			_ReleaseMemoryFrame(&_MemoryFrame);
+		}
+		delete _pHashTable;
+		delete _pSearchInfo;
+		_pHashTable = nullptr;
+		InitSearchinfo();
+	}
+}

@@ -1,21 +1,52 @@
 #pragma once
 #include "bitboard_magic.h"
 #include "move.h"
+#include "hash.h"
+#include "MemoryBlock.h"
 
 class Chessboard
 {
+
+public:
+	Chessboard(void) { }
+
+	inline void init(MemoryBlock* pMemory) {
+		PiecesBB = (U64*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(U64) * 12);
+		History = (U64*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(U64) * GAME_MAX_MOVES);
+		PinBySquare = (S_PinnedPiece*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(S_PinnedPiece) * 64);
+	}
+
+	inline void DoMove(U64* Move) {
+		if (Side == WHITE)
+			return DoMove<WHITE>(Move);
+		return DoMove<BLACK>(Move);
+	}
+	inline void UndoMove() {
+		if (Side == WHITE)
+			return UndoMove<WHITE>();
+		return UndoMove<BLACK>();
+	}
+	inline U64* GenMove(U64* MovePtr) {
+		if (Side == WHITE)
+			return GenMove<WHITE>(MovePtr);
+		return GenMove<BLACK>(MovePtr);
+	}
+
+	inline const U64 getPosKey(void) { return PosKey; }
+
 private:
-	short Side;
-	short EnPas;
-	short FiftyMove;
-	short CastlePerm;
 
-	U64 PosKey;
+	short Side = BLACK;
+	short EnPas = NO_SQ;
+	short FiftyMove = 0;
+	short CastlePerm = 0;
 
-	short Ply;
-	short HisPly;
-	U64 History[GAME_MAX_MOVES];
-	U64 PiecesBB[12];
+	U64 PosKey = 0ULL;
+
+	short Ply = 0;
+	short HisPly = 0;
+	U64 * History = nullptr;
+	U64 * PiecesBB = nullptr;
 
 	inline void NewPiece(const short Type, const short SQ) { 
 		SetBit(&PiecesBB[Type], SQ); 
@@ -47,10 +78,10 @@ private:
 	short InCheckType = 0;
 	bool InCheck = false;
 
-	short myKingSQ;
-	U64 myKingBB;
+	short myKingSQ = NO_SQ;
+	U64 myKingBB = 0ULL;
 
-	S_PinnedPiece PinBySquare[64];
+	S_PinnedPiece * PinBySquare = nullptr;
 	U64 PinnedPiecesBB = 0ULL;
 
 	U64 allPiecesBB = 0ULL;
@@ -265,29 +296,18 @@ private:
 
 	}
 
-public:
-	Chessboard() {
-		for (int i = WhitePawn; i < Empty; i++)
-			PiecesBB[i] = 0ULL;
-		PosKey = 0ULL;
-	}
+	inline void HASH_PCE(short pce, short sq) { PosKey ^= PieceKeys[pce][sq]; }
+	inline void HASH_CA(void) { PosKey ^= CastleKeys[CastlePerm]; }
+	inline void HASH_SIDE(void) { PosKey ^= SideKey; }
+	inline void HASH_EP(void) { PosKey ^= PieceKeys[Empty][EnPas]; }
 
-	inline void DoMove(U64* Move) {
-		if (Side == WHITE)
-			return DoMove<WHITE>(Move);
-		return DoMove<BLACK>(Move);
-	}
-	inline void UndoMove() {
-		if (Side == WHITE)
-			return UndoMove<WHITE>();
-		return UndoMove<BLACK>();
-	}
-	inline U64* GenMove(U64* MovePtr) {
-		if (Side == WHITE)
-			return GenMove<WHITE>(MovePtr);
-		return GenMove<BLACK>(MovePtr);
-	}
-
-	inline const U64 getPosKey(void) { return PosKey; }
 };
 
+inline Chessboard* newChessboard(MemoryBlock* pMemory) {
+	Chessboard* pNewChessboard = (Chessboard*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(Chessboard));
+	if(!pNewChessboard)
+		error_exit("Chessboard: memory alloc failed!");
+
+	pNewChessboard->init(pMemory);
+	return pNewChessboard;
+}

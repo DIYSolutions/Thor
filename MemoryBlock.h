@@ -4,14 +4,14 @@
 class MemoryBlock
 {
 private:
-	u8* pMemoryBlock;
-	u8* apBaseAndCap[2];
-
-	u8* apFrame[2];
-
+	u8* pMemoryBlock = nullptr;
+	u8* apBaseAndCap[2] = { nullptr, nullptr };
+	u8* apFrame[2] = { nullptr, nullptr };
 	S_MemoryFrame MemoryFrame;
 public:
-	MemoryBlock(const U64 memory_size, const short heap_num) {
+	MemoryBlock() {}
+
+	void init(const U64 memory_size, const short heap_num) {
 		MemoryFrame = _GetMemoryFrame(heap_num);
 		pMemoryBlock = (u8*)_AllocFrameMemory(memory_size, heap_num);
 		if (_pMemoryBlock == 0)

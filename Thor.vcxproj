@@ -156,10 +156,14 @@
     <ClInclude Include="bitboard_magic.h" />
     <ClInclude Include="bitboard_movegen.h" />
     <ClInclude Include="Chessboard.h" />
+    <ClInclude Include="ChessThread.h" />
+    <ClInclude Include="ChessThreadManager.h" />
+    <ClInclude Include="ChessThreadMessenger.h" />
     <ClInclude Include="hash.h" />
     <ClInclude Include="MemoryBlock.h" />
     <ClInclude Include="memory_basic.h" />
     <ClInclude Include="move.h" />
+    <ClInclude Include="UCI.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

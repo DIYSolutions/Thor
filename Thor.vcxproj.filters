@@ -50,5 +50,17 @@
     <ClInclude Include="MemoryBlock.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="UCI.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="ChessThread.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="ChessThreadManager.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="ChessThreadMessenger.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

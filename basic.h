@@ -17,6 +17,16 @@ void InitOutputLock();
 void print_console(const char* line, signed short value1, int value2);
 void print_console_str(const char* line, char* str);
 
+#include <chrono>
+inline U64 GetMilliTime() {
+	using namespace std::chrono;
+	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
+inline U64 GetNanoTime() {
+	using namespace std::chrono;
+	return duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
+}
+
 #define DEBUG
 
 #ifndef DEBUG
@@ -29,6 +39,21 @@ void print_console_str(const char* line, char* str);
 typedef enum Colors { BLACK, WHITE };
 typedef enum Pieces { WhitePawn, WhiteKnight, WhiteBishop, WhiteRook, WhiteQueen, WhiteKing, BlackPawn, BlackKnight, BlackBishop, BlackRook, BlackQueen, BlackKing, Empty };
 
+typedef enum MoveExecuteMode {
+	NormalExec = 0, PawnDoubleMove = 1, Castle = 2, EnPassant = 3, Capture = 4, Promote = 5, PromoteCapture = 6, NullMove = 7
+} MoveExecuteMode;
+
+const char mod_names[8][15]{
+	"NormalExec", "PawnDoubleMove", "Castle", "EnPassant", "Capture", "Promote", "PromoteCapture", "NullMove"
+};
+#define getModeName(m) (mod_names[m])
+
+constexpr char piece_names[13][12] = {
+	"WhitePawn", "WhiteKnight", "WhiteBishop", "WhiteRook", "WhiteQueen", "WhiteKing",
+	"BlackPawn", "BlackKnight", "BlackBishop", "BlackRook", "BlackQueen", "BlackKing",
+	"Empty"
+};
+#define getPieceName(p) (piece_names[p])
 
 typedef enum Fields {
 	A1, B1, C1, D1, E1, F1, G1, H1,
@@ -66,6 +91,27 @@ constexpr short mirrorBoard[64] = {
 	7, 6, 5, 4, 3, 2, 1, 0
 };
 
+constexpr int CastlePerm[64] = {
+	13, 15, 15, 15, 12, 15, 15, 14,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	 7, 15, 15, 15,  3, 15, 15, 11,
+};
+
+typedef enum CastleRights {
+	WKCA = 1, WQCA = 2, BKCA = 4, BQCA = 8
+} CastleRights;
+
+typedef struct S_PinnedPiece {
+	short pinner_sq = NO_SQ;
+	short attack_sq = NO_SQ;
+	U64 blockingBB = 0ULL;
+} S_PinnedPiece;
+
 constexpr int SEARCH_MAX_MOVES = 512;
 constexpr int GAME_MAX_MOVES = 2048;
 constexpr int BOARD_MAX_MOVES = 256;
@@ -73,3 +119,4 @@ constexpr int CONTAINER_MAX_MOVES = BOARD_MAX_MOVES * SEARCH_MAX_MOVES;
 constexpr int MAX_THREAD = 128;
 constexpr int STD_THREAD = 1;
 constexpr int STD_HASHTABLE_SIZE = 64;// size in MB
+

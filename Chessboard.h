@@ -44,69 +44,181 @@ private:
 	U64 InCheckBlockingSQ_BB = 0ULL;
 	U64 InCheckAttackSQ_BB = 0ULL;
 	short InCheckNum = 0;
+	short InCheckType = 0;
 	bool InCheck = false;
+
+	short myKingSQ;
+	U64 myKingBB;
+
+	S_PinnedPiece PinBySquare[64];
+	U64 PinnedPiecesBB = 0ULL;
+
+	U64 allPiecesBB = 0ULL;
 
 	template <Pieces Type>
 	inline void getEnemyAttack(U64 pieceBB) {}
 
 	template <>
 	inline void getEnemyAttack<WhitePawn>(U64 pieceBB) {
-
+		ClearBit(&allPiecesBB, myKingSQ);// if in check by bishop, rook or queen then we must check attack without king!
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = AttackBrdwPawnBB[fromSQ];
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = WhitePawn;
+			}
+			EnAttackBB |= PieceAttacksBB;
+		}
 		getEnemyAttack<WhiteKnight>(PiecesBB[WhiteKnight]);
 	}
 	template <>
 	inline void getEnemyAttack<WhiteKnight>(U64 pieceBB) {
-
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = AttackBrdKnightBB[fromSQ];
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = WhiteKnight;
+			}
+			EnAttackBB |= PieceAttacksBB;
+		}
 		getEnemyAttack<WhiteBishop>(PiecesBB[WhiteBishop]);
 	}
 	template <>
 	inline void getEnemyAttack<WhiteBishop>(U64 pieceBB) {
-
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = magicGetBishopAttackBB(fromSQ, allPiecesBB);
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = WhiteBishop;
+				InCheckBlockingSQ_BB = getBishopBlockingSQ_BB(fromSQ, myKingSQ);
+			}
+			EnAttackBB |= PieceAttacksBB;
+		}
 		getEnemyAttack<WhiteRook>(PiecesBB[WhiteRook]);
 	}
 	template <>
 	inline void getEnemyAttack<WhiteRook>(U64 pieceBB) {
-
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = magicGetRookAttackBB(fromSQ, allPiecesBB);
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = WhiteRook;
+				InCheckBlockingSQ_BB = getRookBlockingSQ_BB(fromSQ, myKingSQ);
+			}
+			EnAttackBB |= PieceAttacksBB;
+		}
 		getEnemyAttack<WhiteQueen>(PiecesBB[WhiteQueen]);
 	}
 	template <>
 	inline void getEnemyAttack<WhiteQueen>(U64 pieceBB) {
-
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = magicGetQueenAttackBB(fromSQ, allPiecesBB);
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = WhiteQueen;
+				InCheckBlockingSQ_BB = getBlockingSQ_BB(fromSQ, myKingSQ);
+			}
+			EnAttackBB |= PieceAttacksBB;
+		}
 		getEnemyAttack<WhiteKing>(PiecesBB[WhiteKing]);
 	}
 	template <>
 	inline void getEnemyAttack<WhiteKing>(U64 pieceBB) {
-
+		EnAttackBB |= AttackBrdKingBB[PopBit(&pieceBB)];
+		SetBit(&allPiecesBB, myKingSQ);// put king back
 	}
 
 	template <>
 	inline void getEnemyAttack<BlackPawn>(U64 pieceBB) {
-
+		ClearBit(&allPiecesBB, myKingSQ);// if in check by bishop, rook or queen then we must check attack without king!
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = AttackBrdbPawnBB[fromSQ];
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = BlackPawn;
+			}
+			EnAttackBB |= PieceAttacksBB;
+		}
 		getEnemyAttack<BlackKnight>(PiecesBB[BlackKnight]);
 	}
 	template <>
 	inline void getEnemyAttack<BlackKnight>(U64 pieceBB) {
-
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = AttackBrdKnightBB[fromSQ];
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = BlackKnight;
+			}
+			EnAttackBB |= PieceAttacksBB;
+		}
 		getEnemyAttack<BlackBishop>(PiecesBB[BlackBishop]);
 	}
 	template <>
 	inline void getEnemyAttack<BlackBishop>(U64 pieceBB) {
-
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = magicGetBishopAttackBB(fromSQ, allPiecesBB);
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = BlackBishop;
+				InCheckBlockingSQ_BB = getBishopBlockingSQ_BB(fromSQ, myKingSQ);
+			}
+			EnAttackBB |= PieceAttacksBB;
+		}
 		getEnemyAttack<BlackRook>(PiecesBB[BlackRook]);
 	}
 	template <>
 	inline void getEnemyAttack<BlackRook>(U64 pieceBB) {
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = magicGetRookAttackBB(fromSQ, allPiecesBB);
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = BlackRook;
+				InCheckBlockingSQ_BB = getRookBlockingSQ_BB(fromSQ, myKingSQ);
+			}
+			EnAttackBB |= PieceAttacksBB;
+			//getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
 
+		}
 		getEnemyAttack<BlackQueen>(PiecesBB[BlackQueen]);
 	}
 	template <>
 	inline void getEnemyAttack<BlackQueen>(U64 pieceBB) {
-
+		while (pieceBB) {
+			U64 fromSQ = PopBit(&pieceBB);
+			U64 PieceAttacksBB = magicGetQueenAttackBB(fromSQ, allPiecesBB);
+			if (PieceAttacksBB & myKingBB) {
+				SetBit(&InCheckAttackSQ_BB, fromSQ);
+				InCheckNum++;
+				InCheckType = BlackQueen;
+				InCheckBlockingSQ_BB = getBlockingSQ_BB(fromSQ, myKingSQ);
+			}
+			EnAttackBB |= PieceAttacksBB;
+			//getPinByAttackSQ<BLACK, false>(fromSQ, PinsBySquare);
+		}
 		getEnemyAttack<BlackKing>(PiecesBB[BlackKing]);
 	}
 	template <>
 	inline void getEnemyAttack<BlackKing>(U64 pieceBB) {
-
+		EnAttackBB |= AttackBrdKingBB[PopBit(&pieceBB)];
+		SetBit(&allPiecesBB, myKingSQ);// put king back
 	}
 
 	template <Colors Us>
@@ -145,6 +257,12 @@ private:
 		PremoveBBPromote = MOVE_NEW_PREMOVE(Promote, CastlePerm, FiftyMove, EnPas);
 		PremoveBBPromoteCapture = MOVE_NEW_PREMOVE(PromoteCapture, CastlePerm, FiftyMove, EnPas);
 		PremoveBBCastle = MOVE_NEW_PREMOVE(Castle, CastlePerm, FiftyMove, EnPas);
+
+		EnAttackBB = InCheckAttackSQ_BB = InCheckBlockingSQ_BB = InCheckAttackSQ_BB = 0ULL;
+		InCheckNum = 0;
+		getEnemyAttack<enPAWN>(PiecesBB[enPAWN]);
+
+
 	}
 
 public:

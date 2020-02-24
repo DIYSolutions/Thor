@@ -1,22 +1,6 @@
 #pragma once
 #include "bitboard.h"
 
-typedef enum MoveExecuteMode {
-	NormalExec = 0, PawnDoubleMove = 1, Castle = 2, EnPassant = 3, Capture = 4, Promote = 5, PromoteCapture = 6, NullMove = 7
-} MoveExecuteMode;
-
-const char mod_names[8][15]{
-	"NormalExec", "PawnDoubleMove", "Castle", "EnPassant", "Capture", "Promote", "PromoteCapture", "NullMove"
-};
-#define getModeName(m) (mod_names[m])
-
-constexpr char piece_names[13][12] = {
-	"WhitePawn", "WhiteKnight", "WhiteBishop", "WhiteRook", "WhiteQueen", "WhiteKing",
-	"BlackPawn", "BlackKnight", "BlackBishop", "BlackRook", "BlackQueen", "BlackKing",
-	"Empty"
-};
-#define getPieceName(p) (piece_names[p])
-
 /*
 MOVE - U64 == 8 Byte == 64 Bits
 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0011 1111 -> From - 6 bits - 64 values possible / 64 needed
@@ -51,24 +35,9 @@ constexpr inline U64 MOVE_NEW_PREMOVE(const short Mode, const short CastlePerm, 
 
 constexpr inline U64 MOVE_NEW(const short fromSQ, const short ToSQ, const short Moved, const short Captured, const short Promoted, const U64 PreMove) {
 	return PreMove |
-		(fromSQ & 0x3f) |
-		((ToSQ << 6) & 0xfc0) |
-		((Captured << 12) & 0xf000) |
-		((Promoted << 16) & 0xf0000) |
-		((Moved << 20) & 0xf00000);
+		(((U64)fromSQ) & 0x3f) |
+		((((U64)ToSQ) << 6) & 0xfc0) |
+		((((U64)Captured) << 12) & 0xf000) |
+		((((U64)Promoted) << 16) & 0xf0000) |
+		((((U64)Moved) << 20) & 0xf00000);
 }
-
-constexpr int CastlePerm[64] = {
-	13, 15, 15, 15, 12, 15, 15, 14,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	 7, 15, 15, 15,  3, 15, 15, 11,
-};
-
-typedef enum CastleRights {
-	WKCA = 1, WQCA = 2, BKCA = 4, BQCA = 8
-} CastleRights;

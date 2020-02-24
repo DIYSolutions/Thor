@@ -44,5 +44,11 @@
     <ClInclude Include="hash.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="memory_basic.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryBlock.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

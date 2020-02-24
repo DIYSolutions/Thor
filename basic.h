@@ -2,6 +2,17 @@
 typedef unsigned long long U64;
 typedef signed short BoardValue;
 
+constexpr int SEARCH_MAX_MOVES = 512;
+constexpr int GAME_MAX_MOVES = 2048;
+constexpr int BOARD_MAX_MOVES = 256;
+constexpr int CONTAINER_MAX_MOVES = BOARD_MAX_MOVES * SEARCH_MAX_MOVES;
+constexpr int MAX_THREAD = 128;
+constexpr int STD_THREAD = 1;
+constexpr int STD_HASHTABLE_SIZE = 64;// size in MB
+constexpr int THREAD_MEMORY_SIZE = 1;// size in MB
+constexpr inline U64 getMemorySize(const int hash_mb, const short thread_num) { return (hash_mb + (((U64)thread_num) * THREAD_MEMORY_SIZE)) * 1024 * 1024; };
+
+
 void error_exit(const char* err);
 void error_exit(const char* condition, const char* date, const char* time, const char* file, int line_nr);
 void print_console(const char* line);
@@ -112,11 +123,7 @@ typedef struct S_PinnedPiece {
 	U64 blockingBB = 0ULL;
 } S_PinnedPiece;
 
-constexpr int SEARCH_MAX_MOVES = 512;
-constexpr int GAME_MAX_MOVES = 2048;
-constexpr int BOARD_MAX_MOVES = 256;
-constexpr int CONTAINER_MAX_MOVES = BOARD_MAX_MOVES * SEARCH_MAX_MOVES;
-constexpr int MAX_THREAD = 128;
-constexpr int STD_THREAD = 1;
-constexpr int STD_HASHTABLE_SIZE = 64;// size in MB
-
+typedef struct S_EngineOptions {
+	short ThreadNum = STD_THREAD;
+	U64 MemorySize = getMemorySize(STD_HASHTABLE_SIZE, STD_THREAD);
+} S_EngineOptions;

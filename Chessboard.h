@@ -3,6 +3,7 @@
 #include "move.h"
 #include "hash.h"
 #include "MemoryBlock.h"
+#include "ChessThreadMessenger.h"
 
 class Chessboard
 {
@@ -34,19 +35,42 @@ public:
 
 	inline const U64 getPosKey(void) { return PosKey; }
 
+	inline S_ThreadMessage* GenThreadMessage(const short Mode) {
+		return NewThreadMessage(Side, EnPas, FiftyMove, CastlePerm, PiecesBB, PosKey, Mode);
+	}
+	inline void SetThreadMessage(S_ThreadMessage* msg) {
+		Side = msg->Side;
+		EnPas = msg->EnPas;
+		FiftyMove = msg->FiftyMove;
+		CastlePerm = msg->CastlePerm;
+		PosKey = msg->PosKey;
+		PiecesBB[0] = msg->PiecesBB[0];
+		PiecesBB[1] = msg->PiecesBB[1];
+		PiecesBB[2] = msg->PiecesBB[2];
+		PiecesBB[3] = msg->PiecesBB[3];
+		PiecesBB[4] = msg->PiecesBB[4];
+		PiecesBB[5] = msg->PiecesBB[5];
+		PiecesBB[6] = msg->PiecesBB[6];
+		PiecesBB[7] = msg->PiecesBB[7];
+		PiecesBB[8] = msg->PiecesBB[8];
+		PiecesBB[9] = msg->PiecesBB[9];
+		PiecesBB[10] = msg->PiecesBB[10];
+		PiecesBB[11] = msg->PiecesBB[11];
+		Ply = 0;
+		HisPly = 0;
+	}
 private:
 
 	short Side = BLACK;
 	short EnPas = NO_SQ;
 	short FiftyMove = 0;
 	short CastlePerm = 0;
-
+	U64 * PiecesBB = nullptr;
 	U64 PosKey = 0ULL;
 
 	short Ply = 0;
 	short HisPly = 0;
 	U64 * History = nullptr;
-	U64 * PiecesBB = nullptr;
 
 	inline void NewPiece(const short Type, const short SQ) { 
 		SetBit(&PiecesBB[Type], SQ); 

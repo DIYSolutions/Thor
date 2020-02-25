@@ -54,8 +54,8 @@ inline U64 GetNanoTime() {
 #endif
 
 
-typedef enum Colors { BLACK, WHITE };
-typedef enum Pieces { WhitePawn, WhiteKnight, WhiteBishop, WhiteRook, WhiteQueen, WhiteKing, BlackPawn, BlackKnight, BlackBishop, BlackRook, BlackQueen, BlackKing, Empty };
+enum Colors { BLACK, WHITE };
+enum Pieces { WhitePawn, WhiteKnight, WhiteBishop, WhiteRook, WhiteQueen, WhiteKing, BlackPawn, BlackKnight, BlackBishop, BlackRook, BlackQueen, BlackKing, Empty };
 
 typedef enum MoveExecuteMode {
 	NormalExec = 0, PawnDoubleMove = 1, Castle = 2, EnPassant = 3, Capture = 4, Promote = 5, PromoteCapture = 6, NullMove = 7

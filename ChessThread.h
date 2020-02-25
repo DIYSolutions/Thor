@@ -1,54 +1,114 @@
 #pragma once
 #include "MemoryBlock.h"
 #include "Chessboard.h"
+#include "ChessThreadMessenger.h"
 #include <atomic>
+#include <process.h>
+#include <windows.h>
+#include <thread>
 
-typedef enum ThreadTask { ThreadNeedWork, ThreadAloneSearch, ThreadMainSearch, ThreadPVSearch, ThreadMinMaxSearch };
+typedef enum ThreadTask { ThreadPerftTest, ThreadAloneSearch, ThreadMainSearch, ThreadPVSearch, ThreadMinMaxSearch };
+
+inline void ThreadSleep(std::chrono::milliseconds timespan) {
+	std::this_thread::sleep_for(timespan);
+}
 
 class ChessThread
 {
 public:
-	ChessThread(void) {}
+	ChessThread(void) { }
 
-	inline void init(void) {
+	inline void init(ChessThreadMessenger * _ManagerMessage) {
 		pMemory = (MemoryBlock*)_AllocFrameMemory<ThreadHeap>(sizeof(MemoryBlock));
 		pMemory->init(THREAD_MEMORY_SIZE, ThreadHeap);
 		pChessboard = newChessboard(pMemory);
+		pManagerMessage = _ManagerMessage;
 	}
 
 	void loop(void) {
+		S_ThreadMessage* msg = nullptr;
+		BoardValue Score = 0;
 		ThreadStopped = false;
 		ThreadEnable = true;
+		std::chrono::milliseconds timespan(50); // or whatever		
+		
 	ThreadLoopBegin:
 		ThreadIdle = true;
+		Score = 0;
+		Depth = 0;
+		while(_pSearchInfo->stopped)
+			ThreadSleep(timespan);
+
+		pManagerMessage->ThreadWaiting();
+		msg = pManagerMessage->getNewMessage();
+		while (!msg) {
+			ThreadSleep(timespan);
+			msg = pManagerMessage->getNewMessage();
+		}
+		pManagerMessage->ThreadWorking();
+		ThreadIdle = false;
+		// set up chessboard by S_ThreadMessage
+		pChessboard->SetThreadMessage(msg);
+		Mode = msg->Mode;
+		releaseThreadMessage(msg);
+
 		switch (Mode) {
-		case ThreadNeedWork:
-			// add sleep!!
-			break;
-		case ThreadAloneSearch:
-			ThreadIdle = false;
-			// set up chessboard by FEN
-			// do iterative deepening alphabeta search - MaxDepth == SEARCH_MAX_MOVES
+		case ThreadPerftTest:
 			break;
 		case ThreadMainSearch:
-			ThreadIdle = false;
-			// set up chessboard by FEN
+			pManagerMessage->putNewMessage(
+				pChessboard->GenThreadMessage(ThreadMinMaxSearch)
+			);
+		case ThreadAloneSearch:
 			// do iterative deepening alphabeta search - MaxDepth == SEARCH_MAX_MOVES
-			// manage all other threads
+			while(Depth < SEARCH_MAX_MOVES) {
+
+				if (_pSearchInfo->stopped)
+					break;
+
+				Score = AlphaBeta(++Depth, MIN_INFINTE, MAX_INFINTE);
+
+				if (_pSearchInfo->stopped)
+					break;
+
+				// get pv line
+				// print pv line 
+
+				// no other threads available if Mode != ThreadMainSearch
+				while (pManagerMessage->ThreadAvailable()) {// while threads available
+					// start Thread - Mode == ThreadPVSearch
+					// for each move in pv line
+					// break if no pv line or last move reached
+				}
+				// now for each move in starting position
+				while (pManagerMessage->ThreadAvailable()) {// while threads available
+					// start Thread - Mode == ThreadPVSearch
+					// break if last move reached
+				}
+
+			}
+			//cleanup if Mode == ThreadMainSearch
+			if (Mode == ThreadMainSearch)
+				while (pManagerMessage->getNewMessage());
+			
 			break;
 		case ThreadPVSearch:
-			ThreadIdle = false;
-			// set up chessboard by FEN
-			// do iterative deepening alphabeta search - MaxDepth == 8
+			// do iterative deepening alphabeta search - MaxDepth == 10
+			while (Depth < 10) {
+				// manage all other threads if Mode == ThreadMainSearch
+				Score = AlphaBeta(++Depth, MIN_INFINTE, MAX_INFINTE);
+				if (_pSearchInfo->stopped)
+					break;
+			}
 			break;
 		case ThreadMinMaxSearch:
-			ThreadIdle = false;
-			// set up chessboard by FEN
 			// do minmax search - MaxDepth == 4
+			MinMax(4);
 			break;
 		default:
 			break;
 		}
+
 		if (ThreadEnable)
 			goto ThreadLoopBegin;
 		ThreadStopped = true;
@@ -63,7 +123,7 @@ public:
 		}
 	}
 
-inline void SetMode(const short _Mode) {
+	inline void SetMode(const short _Mode) {
 		Mode = _Mode;
 	}
 	inline BoardValue getMode(void) { return Mode; }
@@ -75,21 +135,34 @@ inline void SetMode(const short _Mode) {
 private:
 	Chessboard* pChessboard = nullptr;
 	MemoryBlock* pMemory = nullptr;
+	ChessThreadMessenger* pManagerMessage = nullptr;
 	std::atomic<bool> ThreadEnable = true;
 	std::atomic<bool> ThreadIdle = true;
 	std::atomic<bool> ThreadStopped = false;
-	short Mode = ThreadNeedWork;
+	short Mode = ThreadPerftTest;
 	char fen[255] = "                                                                                                                                                                                                                                                    ";
 	short fen_len = 0;
 	BoardValue Score = 0;
 	U64 BestMove = 0ULL;
+	short Depth = 0;
+
+
+	void MinMax(const short Depth) { 
+
+	}
+	BoardValue AlphaBeta(const short Depth, BoardValue Alpha, BoardValue Beta) {
+
+	}
+	BoardValue Quiescence(const short Depth) {
+
+	}
 };
 
-inline ChessThread* newChessThread(void) {
+inline ChessThread* newChessThread(ChessThreadMessenger* _ManagerMessage) {
 	ChessThread* pNewChessThread = (ChessThread*)_AllocFrameMemory<ThreadHeap>(sizeof(ChessThread));
 	if (!pNewChessThread)
 		error_exit("ChessThread: memory alloc failed!");
 
-	pNewChessThread->init();
+	pNewChessThread->init(_ManagerMessage);
 	return pNewChessThread;
 }

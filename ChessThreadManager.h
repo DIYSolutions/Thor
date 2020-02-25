@@ -1,18 +1,17 @@
 #pragma once
 #include "ChessThread.h"
+#include "ChessThreadMessenger.h"
 
-#include <process.h>
-#include <windows.h>
 
 void SearchThread(void * _Thread) {
 	ChessThread* Thread = (ChessThread*)_Thread;
 	Thread->loop();
 }
 
-class ChessThreadManager
+class ChessThreadManager: public ChessThreadMessenger
 {
 public:
-	ChessThreadManager() {
+	ChessThreadManager(void): ChessThreadMessenger() {
 	}
 
 	bool ThreadRunning(void) {
@@ -33,8 +32,9 @@ public:
 	}
 	void Startup(const short _ThreadNum) {
 		ThreadNum = 0;
-		for (short i = 0; i < _ThreadNum; i++) {
-			Threads[i] = newChessThread();
+		Threads[0] = newChessThread((ChessThreadMessenger*)this);// first thread is the main thread
+		for (short i = 1; i < _ThreadNum; i++) {
+			Threads[i] = newChessThread((ChessThreadMessenger*)this);
 			// start Thread
 			_beginthread(SearchThread, 0, (void*)&Threads[i]);
 		}
@@ -44,6 +44,4 @@ public:
 private:
 	ChessThread * Threads[MAX_THREAD];
 	short ThreadNum = 0;
-	std::atomic<bool> ThreadEnable = true;
-	std::atomic<bool> ThreadStopped = false;
 };

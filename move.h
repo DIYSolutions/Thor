@@ -1,6 +1,6 @@
 #pragma once
 #include "bitboard.h"
-
+constexpr U64 NOMOVE = 0ULL;
 /*
 MOVE - U64 == 8 Byte == 64 Bits
 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0011 1111 -> From - 6 bits - 64 values possible / 64 needed
@@ -40,4 +40,35 @@ constexpr inline U64 MOVE_NEW(const short fromSQ, const short ToSQ, const short 
 		((((U64)Captured) << 12) & 0xf000) |
 		((((U64)Promoted) << 16) & 0xf0000) |
 		((((U64)Moved) << 20) & 0xf00000);
+}
+
+typedef struct S_MOVE {
+	U64 Move = 0ULL;
+	BoardValue Score = 0;
+} S_MOVE;
+
+typedef struct S_MOVELIST {
+	S_MOVE * MovePtr = nullptr;
+	short count = 0;
+} S_MOVELIST;
+
+constexpr bool IsRook(const short Type) {
+	if (Type == WhiteRook || Type == BlackRook)
+		return true;
+	return false;
+}
+constexpr bool IsBishop(const short Type) {
+	if (Type == WhiteBishop || Type == BlackBishop)
+		return true;
+	return false;
+}
+constexpr bool IsQueen(const short Type) {
+	if (Type == WhiteQueen || Type == BlackQueen)
+		return true;
+	return false;
+}
+constexpr bool IsKnight(const short Type) {
+	if (Type == WhiteKnight || Type == BlackKnight)
+		return true;
+	return false;
 }

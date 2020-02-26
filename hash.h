@@ -65,11 +65,14 @@ typedef struct {
 	std::atomic<U64> starttime;
 	std::atomic<U64> stoptime;
 	std::atomic<int> depth;
-	std::atomic<int> timeset;
+	std::atomic<bool> timeset;
 	std::atomic<int> movestogo;
 
 	std::atomic<U64> nodes;
 
+	std::atomic<int> SubSearchNum;
+
+	std::atomic<bool> useBook;
 	std::atomic<bool> quit;
 	std::atomic<bool> stopped;
 
@@ -87,7 +90,7 @@ typedef enum HashFlags {
 	HFNONE, HFALPHA, HFBETA, HFEXACT
 } HashFlags;
 
-constexpr inline S_HASHENTRY* GET_NEW_HASHENTRY(const U64 posKey) {
+inline S_HASHENTRY* GET_NEW_HASHENTRY(const U64 posKey) {
 	U64 id = posKey % _pHashTable->numEntries;
 	U64 timeExpire = GetMilliTime() - 30000;
 
@@ -100,7 +103,7 @@ constexpr inline S_HASHENTRY* GET_NEW_HASHENTRY(const U64 posKey) {
 	return &(_pHashTable->entrys[id]);
 }
 
-constexpr inline S_HASHENTRY* GET_HASHENTRY(const U64 posKey) {
+inline S_HASHENTRY* GET_HASHENTRY(const U64 posKey) {
 	U64 id = posKey % _pHashTable->numEntries;
 
 	while (id < _pHashTable->numEntries &&
@@ -230,6 +233,18 @@ inline void InitSearchinfo() {
 	_pSearchInfo = new S_SEARCHINFO();
 }
 
+inline void destroyHashTable() {
+	if (_pHashTable != nullptr) {
+		if (_pHashTable->entrys != nullptr) {
+			_ReleaseMemoryFrame(&_MemoryFrame);
+		}
+		delete _pHashTable;
+		delete _pSearchInfo;
+		_pHashTable = nullptr;
+		InitSearchinfo();
+	}
+}
+
 inline void InitHashTable(const U64 HashSize) {
 	destroyHashTable();
 	_pHashTable = new S_HASHTABLE();
@@ -246,17 +261,5 @@ inline void InitHashTable(const U64 HashSize) {
 	else {
 		ClearHashTable();
 		print_console("HashTable init complete with %d entries\n", (int)_pHashTable->numEntries);
-	}
-}
-
-inline void destroyHashTable() {
-	if (_pHashTable != nullptr) {
-		if (_pHashTable->entrys != nullptr) {
-			_ReleaseMemoryFrame(&_MemoryFrame);
-		}
-		delete _pHashTable;
-		delete _pSearchInfo;
-		_pHashTable = nullptr;
-		InitSearchinfo();
 	}
 }

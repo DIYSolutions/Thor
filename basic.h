@@ -2,6 +2,11 @@
 typedef unsigned long long U64;
 typedef signed short BoardValue;
 
+
+#define ENGINE_NAME "Thor"
+#define ENGINE_AUTHOR "Torsten Baublies"
+#define START_FEN  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 constexpr int SEARCH_MAX_MOVES = 512;
 constexpr int GAME_MAX_MOVES = 2048;
 constexpr int BOARD_MAX_MOVES = 256;
@@ -9,22 +14,29 @@ constexpr int CONTAINER_MAX_MOVES = BOARD_MAX_MOVES * SEARCH_MAX_MOVES;
 constexpr int MAX_THREAD = 128;
 constexpr int STD_THREAD = 1;
 constexpr int STD_HASHTABLE_MB = 64;// size in MB
+constexpr int MAX_HASHTABLE_MB = 64 * 1024;// size in MB
 constexpr int THREAD_MEMORY_MB = 1;// size in MB
 constexpr int THREAD_MEMORY_SIZE = THREAD_MEMORY_MB * 1024 * 1024;// size in byte
 constexpr int THREAD_MESSENGER_SIZE = 1024 * 1024;// size in byte
-constexpr inline U64 getMemorySize(const int hash_mb, const short thread_num) { return (hash_mb + (((U64)thread_num) * THREAD_MEMORY_MB)) * 1024 * 1024; };
+constexpr inline U64 getMemorySize(const U64 hash_mb, const short thread_num) { return (hash_mb + (((U64)thread_num) * THREAD_MEMORY_MB)) * 1024 * 1024; };
 
 constexpr signed short MIN_INFINTE = -32765;
 constexpr signed short MAX_INFINTE = 32765;// 100 = one pawn
 constexpr signed short MIN_MATE = -30000;
 constexpr signed short MAX_MATE = 30000;
 
+enum { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, FILE_NONE };
+enum { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_NONE };
+constexpr char PceChar[13][1] = {
+	'P','N','B','R','Q','K','p','n','b','r','q','k','-'
+};
 
 void error_exit(const char* err);
 void error_exit(const char* condition, const char* date, const char* time, const char* file, int line_nr);
 void print_console(const char* line);
 void print_console(const char* line, int value);
 void print_console(const char* line, U64 value);
+void print_console(const char* line, char* value);
 void printing_console_start();
 void print_console_str(const char* line, signed int number);
 void print_console_str(long double number);

@@ -30,6 +30,12 @@ void print_console(const char* line) {
 	printing_console_end(); // release lock
 }
 
+void print_console(const char* line, char * value) {
+	printing_console_start(); // acquire lock
+	printf(line, value);
+	printing_console_end(); // release lock
+}
+
 void print_console(const char* line, int value) {
 	printing_console_start(); // acquire lock
 	printf(line, value);

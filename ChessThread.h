@@ -7,7 +7,7 @@
 #include <windows.h>
 #include <thread>
 
-typedef enum ThreadTask { ThreadPerftTest, ThreadAloneSearch, ThreadMainSearch, ThreadPVSearch, ThreadMinMaxSearch };
+enum ThreadTask { ThreadPerftTest, ThreadAloneSearch, ThreadMainSearch, ThreadSubSearch, ThreadPVSearch, ThreadMinMaxSearch };
 
 inline void ThreadSleep(std::chrono::milliseconds timespan) {
 	std::this_thread::sleep_for(timespan);
@@ -55,6 +55,8 @@ public:
 		switch (Mode) {
 		case ThreadPerftTest:
 			break;
+		case ThreadSubSearch:
+			_pSearchInfo->SubSearchNum++;
 		case ThreadMainSearch:
 			pManagerMessage->putNewMessage(
 				pChessboard->GenThreadMessage(ThreadMinMaxSearch)
@@ -85,7 +87,16 @@ public:
 					// start Thread - Mode == ThreadPVSearch
 					// break if last move reached
 				}
-
+				if (Mode == ThreadSubSearch) {
+					if (Depth >= _pSearchInfo->depth) {
+						_pSearchInfo->SubSearchNum--;
+						break;
+					}
+				}
+				else {
+					_pSearchInfo->depth = Depth;
+					
+				}
 			}
 			//cleanup if Mode == ThreadMainSearch
 			if (Mode == ThreadMainSearch)
@@ -151,10 +162,10 @@ private:
 
 	}
 	BoardValue AlphaBeta(const short Depth, BoardValue Alpha, BoardValue Beta) {
-
+		return 0;
 	}
 	BoardValue Quiescence(const short Depth) {
-
+		return 0;
 	}
 };
 

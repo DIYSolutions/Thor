@@ -17,17 +17,17 @@ public:
 		PinBySquare = (S_PinnedPiece*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(S_PinnedPiece) * 64);
 	}
 
-	inline void DoMove(U64* Move) {
+	inline void doMove(U64* Move) {
 		if (Side == WHITE)
 			return DoMove<WHITE>(Move);
 		return DoMove<BLACK>(Move);
 	}
-	inline void UndoMove() {
+	inline void undoMove() {
 		if (Side == WHITE)
 			return UndoMove<WHITE>();
 		return UndoMove<BLACK>();
 	}
-	inline U64* GenMove(U64* MovePtr) {
+	inline S_MOVE* genMove(S_MOVE* MovePtr) {
 		if (Side == WHITE)
 			return GenMove<WHITE>(MovePtr);
 		return GenMove<BLACK>(MovePtr);
@@ -58,6 +58,166 @@ public:
 		PiecesBB[11] = msg->PiecesBB[11];
 		Ply = 0;
 		HisPly = 0;
+	}
+
+	inline short SideToMove(void) { return Side; }
+	inline short HistoryPly(void) { return HisPly; }
+
+	inline bool ParseFEN(char * fen) {
+		short  rank = RANK_8;
+		short  file = FILE_A;
+		short  piece = 0;
+		short  count = 0;
+		short  i = 0;
+		short  sq = 0;
+
+		ResetBoard();
+
+		while ((rank >= RANK_1) && *fen) {
+			count = 1;
+			switch (*fen) {
+			case 'p': piece = BlackPawn; break;
+			case 'r': piece = BlackRook; break;
+			case 'n': piece = BlackKnight; break;
+			case 'b': piece = BlackBishop; break;
+			case 'k': piece = BlackKing; break;
+			case 'q': piece = BlackQueen; break;
+			case 'P': piece = WhitePawn; break;
+			case 'R': piece = WhiteRook; break;
+			case 'N': piece = WhiteKnight; break;
+			case 'B': piece = WhiteBishop; break;
+			case 'K': piece = WhiteKing; break;
+			case 'Q': piece = WhiteQueen; break;
+
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+				piece = Empty;
+				count = *fen - '0';
+				break;
+
+			case '/':
+			case ' ':
+				rank--;
+				file = FILE_A;
+				fen++;
+				continue;
+
+			default:
+				printf("FEN error \n");
+				return false;
+			}
+
+			for (i = 0; i < count; i++) {
+				sq = rank * 8 + file;
+				if (piece != Empty) {
+					NewPiece(piece, sq);
+				}
+				file++;
+			}
+			fen++;
+		}
+
+		ASSERT(*fen == 'w' || *fen == 'b');
+
+		Side = (*fen == 'w') ? WHITE : BLACK;
+		fen += 2;
+
+		for (i = 0; i < 4; i++) {
+			if (*fen == ' ') {
+				break;
+			}
+			switch (*fen) {
+			case 'K': CastlePerm |= WKCA; break;
+			case 'Q': CastlePerm |= WQCA; break;
+			case 'k': CastlePerm |= BKCA; break;
+			case 'q': CastlePerm |= BQCA; break;
+			default:	     break;
+			}
+			fen++;
+		}
+		fen++;
+
+		ASSERT(CastlePerm >= 0 && CastlePerm <= 15);
+
+		if (*fen != '-') {
+			file = fen[0] - 'a';
+			rank = fen[1] - '1';
+
+			ASSERT(file >= FILE_A && file <= FILE_H);
+			ASSERT(rank >= RANK_1 && rank <= RANK_8);
+
+			EnPas = FR2SQ(file, rank);
+		}
+
+		GeneratePosKey();
+		return true;
+	}
+
+	inline void setPly(short _Ply) { Ply = _Ply; }
+
+	inline short getPieceType(short SQ) {
+		U64 thisSQ = SetMask[SQ];
+		if (thisSQ && PiecesBB[WhitePawn])
+			return WhitePawn;
+		if (thisSQ && PiecesBB[WhiteKnight])
+			return WhiteKnight;
+		if (thisSQ && PiecesBB[WhiteBishop])
+			return WhiteBishop;
+		if (thisSQ && PiecesBB[WhiteRook])
+			return WhiteRook;
+		if (thisSQ && PiecesBB[WhiteQueen])
+			return WhiteQueen;
+		if (thisSQ && PiecesBB[WhiteKing])
+			return WhiteKing;
+
+		if (thisSQ && PiecesBB[BlackPawn])
+			return BlackPawn;
+		if (thisSQ && PiecesBB[BlackKnight])
+			return BlackKnight;
+		if (thisSQ && PiecesBB[BlackBishop])
+			return BlackBishop;
+		if (thisSQ && PiecesBB[BlackRook])
+			return BlackRook;
+		if (thisSQ && PiecesBB[BlackQueen])
+			return BlackQueen;
+		if (thisSQ && PiecesBB[BlackKing])
+			return BlackKing;
+		return Empty;
+	}
+
+	inline void PrintBoard(void) {
+		int file, rank;
+		printing_console_start();
+		printf("\nGame Board:\n\n");
+
+		for (rank = RANK_8; rank >= RANK_1; rank--) {
+			printf("%d  ", rank + 1);
+			for (file = FILE_A; file <= FILE_H; file++)
+				printf("%c  ", PceChar[getPieceType(FR2SQ(file, rank))][0]);
+			printf("\n");
+		}
+
+		printf("\n   ");
+		for (file = FILE_A; file <= FILE_H; file++) {
+			printf("%3c", 'a' + file);
+		}
+		printf("\n");
+		printf("side:%c\n", Side == WHITE ? 'w' : 'b');
+		printf("enPas:%d\n", EnPas);
+		printf("castle:%c%c%c%c\n",
+			CastlePerm & WKCA ? 'K' : '-',
+			CastlePerm & WQCA ? 'Q' : '-',
+			CastlePerm & BKCA ? 'k' : '-',
+			CastlePerm & BQCA ? 'q' : '-'
+		);
+		printf("PosKey:%llX\n", PosKey);
+		printing_console_end();
 	}
 private:
 
@@ -110,6 +270,55 @@ private:
 
 	U64 allPiecesBB = 0ULL;
 
+	inline void GeneratePosKey(void) {
+		int sq = 0;
+		PosKey = 0ULL;
+		int piece = Empty;
+
+		// pieces
+		for (piece = 0; piece < Empty; ++piece) {
+			U64 pieceBB = PiecesBB[piece];
+			while (pieceBB) {
+				PosKey ^= PieceKeys[piece][PopBit(&pieceBB)];
+			}
+		}
+
+		if (Side == WHITE) {
+			PosKey ^= SideKey;
+		}
+
+		if (EnPas != NO_SQ) {
+			ASSERT(EnPas >= 0 && EnPas < NO_SQ);
+			PosKey ^= PieceKeys[Empty][EnPas];
+		}
+
+		ASSERT(CastlePerm >= 0 && CastlePerm <= 15);
+
+		PosKey ^= CastleKeys[CastlePerm];
+	}
+
+	inline void ResetBoard(void) {
+		Side = BLACK;
+		EnPas = NO_SQ;
+		FiftyMove = 0;
+		CastlePerm = 0;
+		PosKey = 0ULL;
+		PiecesBB[0] = 0ULL;
+		PiecesBB[1] = 0ULL;
+		PiecesBB[2] = 0ULL;
+		PiecesBB[3] = 0ULL;
+		PiecesBB[4] = 0ULL;
+		PiecesBB[5] = 0ULL;
+		PiecesBB[6] = 0ULL;
+		PiecesBB[7] = 0ULL;
+		PiecesBB[8] = 0ULL;
+		PiecesBB[9] = 0ULL;
+		PiecesBB[10] = 0ULL;
+		PiecesBB[11] = 0ULL;
+		Ply = 0;
+		HisPly = 0;
+	}
+
 	template <Pieces Type>
 	inline void getEnemyAttack(U64 pieceBB) {}
 
@@ -117,7 +326,7 @@ private:
 	inline void getEnemyAttack<WhitePawn>(U64 pieceBB) {
 		ClearBit(&allPiecesBB, myKingSQ);// if in check by bishop, rook or queen then we must check attack without king!
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = AttackBrdwPawnBB[fromSQ];
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -131,7 +340,7 @@ private:
 	template <>
 	inline void getEnemyAttack<WhiteKnight>(U64 pieceBB) {
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = AttackBrdKnightBB[fromSQ];
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -145,7 +354,7 @@ private:
 	template <>
 	inline void getEnemyAttack<WhiteBishop>(U64 pieceBB) {
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = magicGetBishopAttackBB(fromSQ, allPiecesBB);
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -160,7 +369,7 @@ private:
 	template <>
 	inline void getEnemyAttack<WhiteRook>(U64 pieceBB) {
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = magicGetRookAttackBB(fromSQ, allPiecesBB);
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -175,7 +384,7 @@ private:
 	template <>
 	inline void getEnemyAttack<WhiteQueen>(U64 pieceBB) {
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = magicGetQueenAttackBB(fromSQ, allPiecesBB);
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -197,7 +406,7 @@ private:
 	inline void getEnemyAttack<BlackPawn>(U64 pieceBB) {
 		ClearBit(&allPiecesBB, myKingSQ);// if in check by bishop, rook or queen then we must check attack without king!
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = AttackBrdbPawnBB[fromSQ];
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -211,7 +420,7 @@ private:
 	template <>
 	inline void getEnemyAttack<BlackKnight>(U64 pieceBB) {
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = AttackBrdKnightBB[fromSQ];
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -225,7 +434,7 @@ private:
 	template <>
 	inline void getEnemyAttack<BlackBishop>(U64 pieceBB) {
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = magicGetBishopAttackBB(fromSQ, allPiecesBB);
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -240,7 +449,7 @@ private:
 	template <>
 	inline void getEnemyAttack<BlackRook>(U64 pieceBB) {
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = magicGetRookAttackBB(fromSQ, allPiecesBB);
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -257,7 +466,7 @@ private:
 	template <>
 	inline void getEnemyAttack<BlackQueen>(U64 pieceBB) {
 		while (pieceBB) {
-			U64 fromSQ = PopBit(&pieceBB);
+			short fromSQ = PopBit(&pieceBB);
 			U64 PieceAttacksBB = magicGetQueenAttackBB(fromSQ, allPiecesBB);
 			if (PieceAttacksBB & myKingBB) {
 				SetBit(&InCheckAttackSQ_BB, fromSQ);
@@ -277,7 +486,7 @@ private:
 	}
 
 	template <Colors Us>
-	inline U64* GenMove(U64* MovePtr) {
+	inline S_MOVE* GenMove(S_MOVE * MovePtr) {
 		constexpr short myPAWN = Us == WHITE ? WhitePawn : BlackPawn;
 		constexpr short myKNIGHT = Us == WHITE ? WhiteKnight : BlackKnight;
 		constexpr short myBISHOP = Us == WHITE ? WhiteBishop : BlackBishop;

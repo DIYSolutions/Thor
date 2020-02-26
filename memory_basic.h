@@ -3,7 +3,7 @@
 #include <malloc.h>
 
 typedef unsigned char u8;
-typedef enum HEAPNUM { HashHeap, ThreadHeap };
+enum HEAPNUM { HashHeap, ThreadHeap };
 
 typedef struct S_MemoryFrame {
 	u8* pFrame = nullptr;

@@ -13,17 +13,22 @@ typedef struct S_MemoryFrame {
 #define ALIGNUP( nAddress, nBytes ) ( (((U64)nAddress) + (nBytes)-1)&(~((nBytes)-1)) )
 
 static int _nByteAlignment;
-static u8* _pMemoryBlock;
+static u8* _pMemoryBlock = nullptr;
 static u8* _apBaseAndCap[2];
 
 static u8* _apFrame[2];
 
+enum FrameInitStatus {FrameInit, FrameReInit};
 
+template <FrameInitStatus FIS>
 inline bool _InitFrameMemorySystem(U64 nSizeInBytes, int nByteAlignment) {
 	nSizeInBytes = ALIGNUP(nSizeInBytes, nByteAlignment);
 
-	_pMemoryBlock = (u8*)malloc(nSizeInBytes + nByteAlignment);
-
+	if(FIS == FrameInit)
+		_pMemoryBlock = (u8*)malloc(nSizeInBytes + nByteAlignment);
+	else
+		_pMemoryBlock = (u8*)realloc(_pMemoryBlock, nSizeInBytes + nByteAlignment);
+	
 	if (_pMemoryBlock == 0)
 		return false;
 
@@ -38,8 +43,10 @@ inline bool _InitFrameMemorySystem(U64 nSizeInBytes, int nByteAlignment) {
 	return true;
 }
 
+
 inline void _ShutdownFrameMemorySystem(void) {
-	free(_pMemoryBlock);
+	if (_pMemoryBlock)
+		free(_pMemoryBlock);
 }
 
 

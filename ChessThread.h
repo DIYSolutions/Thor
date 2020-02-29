@@ -17,12 +17,17 @@ class ChessThread
 {
 public:
 	ChessThread(void) { }
-
-	inline void init(ChessThreadMessenger * _ManagerMessage) {
-		pMemory = (MemoryBlock*)_AllocFrameMemory<ThreadHeap>(sizeof(MemoryBlock));
+	inline void deactivate() {
+		delete pChessboard;
+		pMemory->ReleaseMemoryFrame(&MemoryFrame);
+		delete pMemory;
+	}
+	inline void init(short threadID) {
+		_tid = threadID;
+		pMemory = new MemoryBlock();
 		pMemory->init(THREAD_MEMORY_SIZE, ThreadHeap);
+		MemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
 		pChessboard = newChessboard(pMemory);
-		pManagerMessage = _ManagerMessage;
 	}
 
 	void loop(void) {
@@ -30,22 +35,22 @@ public:
 		BoardValue Score = 0;
 		ThreadStopped = false;
 		ThreadEnable = true;
-		std::chrono::milliseconds timespan(50); // or whatever		
-		
+		std::chrono::milliseconds timespan(50); // 50ms	
+		MESSENGER->ThreadRunning();
 	ThreadLoopBegin:
 		ThreadIdle = true;
 		Score = 0;
 		Depth = 0;
-		while(_pSearchInfo->stopped)
-			ThreadSleep(timespan);
 
-		pManagerMessage->ThreadWaiting();
-		msg = pManagerMessage->getNewMessage();
+		MESSENGER->ThreadWaiting();
+		msg = MESSENGER->getNewMessage();
 		while (!msg) {
+			if (!ThreadEnable || _pSearchInfo->stopped)
+				goto ThreadLoopEnd;
 			ThreadSleep(timespan);
-			msg = pManagerMessage->getNewMessage();
+			msg = MESSENGER->getNewMessage();
 		}
-		pManagerMessage->ThreadWorking();
+		MESSENGER->ThreadWorking();
 		ThreadIdle = false;
 		// set up chessboard by S_ThreadMessage
 		pChessboard->SetThreadMessage(msg);
@@ -54,11 +59,13 @@ public:
 
 		switch (Mode) {
 		case ThreadPerftTest:
+			ThreadSleep(timespan * 10);
+			print_console("ThreadPerftTest %d\n", _tid);
 			break;
 		case ThreadSubSearch:
 			_pSearchInfo->SubSearchNum++;
 		case ThreadMainSearch:
-			pManagerMessage->putNewMessage(
+			MESSENGER->putNewMessage(
 				pChessboard->GenThreadMessage(ThreadMinMaxSearch)
 			);
 		case ThreadAloneSearch:
@@ -77,13 +84,13 @@ public:
 				// print pv line 
 
 				// no other threads available if Mode != ThreadMainSearch
-				while (pManagerMessage->ThreadAvailable()) {// while threads available
+				while (MESSENGER->ThreadAvailable()) {// while threads available
 					// start Thread - Mode == ThreadPVSearch
 					// for each move in pv line
 					// break if no pv line or last move reached
 				}
 				// now for each move in starting position
-				while (pManagerMessage->ThreadAvailable()) {// while threads available
+				while (MESSENGER->ThreadAvailable()) {// while threads available
 					// start Thread - Mode == ThreadPVSearch
 					// break if last move reached
 				}
@@ -100,7 +107,7 @@ public:
 			}
 			//cleanup if Mode == ThreadMainSearch
 			if (Mode == ThreadMainSearch)
-				while (pManagerMessage->getNewMessage());
+				while (MESSENGER->getNewMessage());
 			
 			break;
 		case ThreadPVSearch:
@@ -119,13 +126,14 @@ public:
 		default:
 			break;
 		}
-
 		if (ThreadEnable)
 			goto ThreadLoopBegin;
+	ThreadLoopEnd:
 		ThreadStopped = true;
+		MESSENGER->ThreadStopped();
 	}
 	
-	inline void StopThread(void) { ThreadEnable = false; }
+	inline void StopThread(void) { ThreadEnable = false; _pSearchInfo->stopped = true; }
 
 	inline void SetFEN(char* fen) {
 		fen_len = 0;
@@ -144,9 +152,9 @@ public:
 	inline bool Stopped(void) { return ThreadStopped; }
 	inline bool Idle(void) { return ThreadIdle; }
 private:
+	S_MemoryFrame MemoryFrame;
 	Chessboard* pChessboard = nullptr;
 	MemoryBlock* pMemory = nullptr;
-	ChessThreadMessenger* pManagerMessage = nullptr;
 	std::atomic<bool> ThreadEnable = true;
 	std::atomic<bool> ThreadIdle = true;
 	std::atomic<bool> ThreadStopped = false;
@@ -156,7 +164,7 @@ private:
 	BoardValue Score = 0;
 	U64 BestMove = 0ULL;
 	short Depth = 0;
-
+	short _tid = 0;
 
 	void MinMax(const short Depth) { 
 
@@ -168,12 +176,3 @@ private:
 		return 0;
 	}
 };
-
-inline ChessThread* newChessThread(ChessThreadMessenger* _ManagerMessage) {
-	ChessThread* pNewChessThread = (ChessThread*)_AllocFrameMemory<ThreadHeap>(sizeof(ChessThread));
-	if (!pNewChessThread)
-		error_exit("ChessThread: memory alloc failed!");
-
-	pNewChessThread->init(_ManagerMessage);
-	return pNewChessThread;
-}

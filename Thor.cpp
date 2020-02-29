@@ -6,7 +6,8 @@
 
 int main()
 {
-	std::cout << "Hello World!\n";
+	UCI * cmd = new UCI();
+	cmd->uci_loop();
 }
 
 // Programm ausführen: STRG+F5 oder "Debuggen" > Menü "Ohne Debuggen starten"

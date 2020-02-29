@@ -10,10 +10,19 @@ class Chessboard
 
 public:
 	Chessboard(void) { }
+	~Chessboard(void) {
+		pMemory->ReleaseMemoryFrame(&MemoryFrame);
+	}
 
-	inline void init(MemoryBlock* pMemory) {
+	inline void init(MemoryBlock* _pMemory) {
+		pMemory = _pMemory;
+		MemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
 		PiecesBB = (U64*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(U64) * 12);
+		for (short i = 0; i < NO_SQ; i++)
+			PiecesBB[i] = 0ULL;
 		History = (U64*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(U64) * GAME_MAX_MOVES);
+		for (short i = 0; i < GAME_MAX_MOVES; i++)
+			History[i] = 0ULL;
 		PinBySquare = (S_PinnedPiece*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(S_PinnedPiece) * 64);
 	}
 
@@ -221,6 +230,8 @@ public:
 	}
 private:
 
+	S_MemoryFrame MemoryFrame;
+	MemoryBlock* pMemory;
 	short Side = BLACK;
 	short EnPas = NO_SQ;
 	short FiftyMove = 0;
@@ -526,7 +537,7 @@ private:
 		InCheckNum = 0;
 		getEnemyAttack<enPAWN>(PiecesBB[enPAWN]);
 
-
+		return MovePtr;
 	}
 
 	inline void HASH_PCE(short pce, short sq) { PosKey ^= PieceKeys[pce][sq]; }
@@ -537,7 +548,7 @@ private:
 };
 
 inline Chessboard* newChessboard(MemoryBlock* pMemory) {
-	Chessboard* pNewChessboard = (Chessboard*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(Chessboard));
+	Chessboard* pNewChessboard = new Chessboard();
 	if(!pNewChessboard)
 		error_exit("Chessboard: memory alloc failed!");
 

@@ -32,7 +32,7 @@ void print_console(const char* line) {
 
 void print_console(const char* line, char * value) {
 	printing_console_start(); // acquire lock
-	printf(line, value);
+	printf(line, *value);
 	printing_console_end(); // release lock
 }
 
@@ -81,5 +81,6 @@ void print_console_endl() {
 }
 
 void printing_console_end() {
+	fflush(stdout);
 	lock.clear(std::memory_order_release); // release lock
 }

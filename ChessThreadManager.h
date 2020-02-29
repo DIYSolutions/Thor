@@ -8,40 +8,46 @@ void SearchThread(void * _Thread) {
 	Thread->loop();
 }
 
-class ChessThreadManager: public ChessThreadMessenger
+class ChessThreadManager
 {
 public:
-	ChessThreadManager(void): ChessThreadMessenger() {
-	}
+	ChessThreadManager(void) {	}
 
-	bool ThreadRunning(void) {
-		for (short i = 0; i < ThreadNum; i++)
-			if (Threads[i]->Stopped())
-				return true;
-		return false;
+	inline bool ThreadRunning(void) {
+		return !MESSENGER->ThreadsStopped();
 	}
 	void StopSearch(void) {
 		_pSearchInfo->stopped = true;
 	}
 	void Shutdown(void) {
 		_pSearchInfo->stopped = true;
-		for (short i = 0; i < ThreadNum; i++)
-			Threads[i]->StopThread();
 		
 		while (ThreadRunning());
+
+		for (short i = ThreadNum - 1; i >= 0; i--) {
+			Threads[i].deactivate();
+		}
+
+		_ReleaseMemoryFrame(&MemoryFrame);
 	}
 	void Startup(const short _ThreadNum) {
-		ThreadNum = 0;
-		Threads[0] = newChessThread((ChessThreadMessenger*)this);// first thread is the main thread
-		for (short i = 1; i < _ThreadNum; i++) {
-			Threads[i] = newChessThread((ChessThreadMessenger*)this);
+		ThreadNum = _ThreadNum;
+		MemoryFrame = _GetMemoryFrame(ThreadHeap);
+		for (short i = 0; i < _ThreadNum; i++) {
+			Threads[i].init(i);
 			// start Thread
 			_beginthread(SearchThread, 0, (void*)&Threads[i]);
 		}
 	}
 
+	inline void putNewMessage(S_ThreadMessage* newMessage) {
+		MESSENGER->putNewMessage(newMessage);
+	}
+
 
 private:
-	ChessThread * Threads[MAX_THREAD];
+	ChessThread Threads[MAX_THREAD];
 	short ThreadNum = 0;
+	S_MemoryFrame MemoryFrame;
+	
 };

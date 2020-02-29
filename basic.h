@@ -18,7 +18,7 @@ constexpr int MAX_HASHTABLE_MB = 64 * 1024;// size in MB
 constexpr int THREAD_MEMORY_MB = 1;// size in MB
 constexpr int THREAD_MEMORY_SIZE = THREAD_MEMORY_MB * 1024 * 1024;// size in byte
 constexpr int THREAD_MESSENGER_SIZE = 1024 * 1024;// size in byte
-constexpr inline U64 getMemorySize(const U64 hash_mb, const short thread_num) { return (hash_mb + (((U64)thread_num) * THREAD_MEMORY_MB)) * 1024 * 1024; };
+constexpr inline U64 getMemorySize(const U64 hash_mb, const short thread_num) { return (hash_mb  * 1024 * 1024) + (U64)(THREAD_MEMORY_SIZE * ((int)thread_num + 1)) + 1024; };
 
 constexpr signed short MIN_INFINTE = -32765;
 constexpr signed short MAX_INFINTE = 32765;// 100 = one pawn

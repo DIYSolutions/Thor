@@ -7,7 +7,7 @@ typedef struct S_ThreadMessage {
 	short EnPas = NO_SQ;
 	short FiftyMove = 0;
 	short CastlePerm = 0;
-	U64* PiecesBB = nullptr;
+	U64 PiecesBB[12];
 	U64 PosKey = 0ULL;
 	
 	short Mode = 0;
@@ -85,11 +85,39 @@ inline void releaseThreadMessage(S_ThreadMessage* old) {
 	_ThreadMessagesLock.clear(std::memory_order_release);
 }
 
-class ChessThreadMessenger
+template <typename C>
+class Singleton
 {
+public:
+	static C* instance()
+	{
+		if (!_instance)
+			_instance = new C();
+		return _instance;
+	}
+	virtual
+		~Singleton()
+	{
+		_instance = 0;
+	}
+private:
+	static C* _instance;
+protected:
+	Singleton() { }
+};
+template <typename C> C* Singleton <C>::_instance = 0;
+
+
+
+
+class ChessThreadMessenger: public Singleton <ChessThreadMessenger>
+{
+	friend class Singleton <ChessThreadMessenger>;
 public:
 	ChessThreadMessenger(void) {
 		lock.clear();
+		_ThreadsWaiting = 0;
+		_ThreadsRunning = 0;
 	}
 	inline S_ThreadMessage* getNewMessage(void) {
 		while (lock.test_and_set(std::memory_order_acquire)) // acquire lock
@@ -112,16 +140,40 @@ public:
 		_MessagesRoot.next = newMessage;
 		lock.clear(std::memory_order_release);
 	}
-	inline void ThreadWaiting(void) { _ThreadsWaiting++; }
-	inline void ThreadWorking(void) { _ThreadsWaiting--; }
-	inline const bool ThreadAvailable(void) {	return _ThreadsWaiting > 0;	}
+	inline void ThreadRunning(void) {
+		_ThreadsRunning++;
+	}
+	inline void ThreadStopped(void) {
+		_ThreadsRunning--;
+	}
+	inline void ThreadWaiting(void) {
+		_ThreadsWaiting++;
+	}
+	inline void ThreadWorking(void) {
+		_ThreadsWaiting--;
+	}
+	inline bool ThreadsStopped(void) {
+		return _ThreadsRunning == 0;
+	}
+	inline bool ThreadAvailable(void) {
+		return _ThreadsWaiting > 0;
+	}
+	inline short ThreadsRunningNum(void) {
+		return _ThreadsRunning;
+	}
+	inline short ThreadsWaitingNum(void) {
+		return _ThreadsWaiting;
+	}
 private:
+	std::atomic<short> _ThreadsRunning;
+	std::atomic<short> _ThreadsWaiting;
 	std::atomic_flag lock;
 	S_ThreadMessage _MessagesRoot;
-	std::atomic<short> _ThreadsWaiting = 0;
 
 	inline bool MessageWaiting(void) {
 		return _MessagesRoot.next != nullptr;
 	}
 
 };
+
+#define MESSENGER ChessThreadMessenger::instance()

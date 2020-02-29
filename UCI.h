@@ -7,9 +7,11 @@ class UCI
 {
 public:
 	UCI() {
+		InitMessageContainer();
 		InitSearchinfo();
 		pTaskManager = new ChessThreadManager();
-		pChessboard = new Chessboard();
+		if (!_InitFrameMemorySystem<FrameInit>(MemorySize, 4))
+			error_exit("UCI: _InitFrameMemorySystem<FrameInit> failed!");;
 		init();
 	}
 
@@ -18,12 +20,12 @@ public:
 		setvbuf(stdout, NULL, _IOFBF , INPUTBUFFER);
 
 		char line[INPUTBUFFER];
-		print_console("id name %*s\n", (char*)ENGINE_NAME);
-		print_console("id author %*s\n", (char*)ENGINE_AUTHOR);
-		print_console("option name Threads type spin default 1 min 1 max %d\n", MAX_THREAD);
-		print_console("option name Hash type spin default 64 min 4 max %d\n", MAX_HASHTABLE_MB);
-		print_console("option name Book type check default false\n");
-		print_console("uciok\n");
+		std::cout << "id name " << ENGINE_NAME << std::endl;
+		std::cout << "id author " << ENGINE_AUTHOR << std::endl;
+		std::cout << "option name Threads type spin default 1 min 1 max " << MAX_THREAD << std::endl;
+		std::cout << "option name Hash type spin default 64 min 4 max " << MAX_HASHTABLE_MB << std::endl;
+		std::cout << "option name Book type check default false" << std::endl;
+		std::cout << "uciok" << std::endl;
 
 		int MB = STD_HASHTABLE_MB;
 		int T = STD_THREAD;
@@ -37,17 +39,17 @@ public:
 				continue;
 
 			if (!strncmp(line, "isready", 7)) {
-				print_console("readyok\n");
+				print_console("readyok");
 				continue;
 			}
 			else if (!strncmp(line, "position", 8)) {
 				ParsePosition(line);
 			}
 			else if (!strncmp(line, "ucinewgame", 10)) {
-				ParsePosition((char*)"position startpos\n");
+				ParsePosition((char*)"position startpos");
 			}
 			else if (!strncmp(line, "go", 2)) {
-				print_console("Seen Go..\n");
+				print_console("Seen Go..");
 				ParseGo(line);
 			}
 			else if (!strncmp(line, "quit", 4)) {
@@ -55,22 +57,25 @@ public:
 				break;
 			}
 			else if (!strncmp(line, "uci", 3)) {
-				print_console("id name %s\n", (char*)ENGINE_NAME);
-				print_console("id author %s\n", (char*)ENGINE_AUTHOR);
-				print_console("uciok\n");
+				printing_console_start();
+				std::cout << "id name " << ENGINE_NAME << std::endl;
+				std::cout << "id author " << ENGINE_AUTHOR << std::endl;
+				std::cout << "uciok" << std::endl;
+				printing_console_end();
 			}
 			else if (!strncmp(line, "debug", 4)) {
-				pTaskManager->putNewMessage(
-					pChessboard->GenThreadMessage(ThreadPerftTest)
-				);
-				break;
+				for (int i = 0; i < MESSENGER->ThreadsRunningNum(); i++)
+					pTaskManager->putNewMessage(
+						pChessboard->GenThreadMessage(ThreadPerftTest)
+					);
 			}
 			else if (!strncmp(line, "setoption name Threads value ", 29)) {
 				sscanf_s(line, "%*s %*s %*s %*s %d", &T);
-				if (T < 4) T = 4;
+				if (T < 1) T = 1;
 				if (T > MAX_THREAD) T = MAX_THREAD;
+
 				print_console("Set Threads to %d\n", T);
-				SetupThreadsAndMemory(getMemorySize(MemorySize, T), T);
+				SetupThreadsAndMemory(getMemorySize(MB, T), T);
 			}
 			else if (!strncmp(line, "setoption name Hash value ", 26)) {
 				sscanf_s(line, "%*s %*s %*s %*s %d", &MB);
@@ -92,6 +97,7 @@ public:
 
 			if (_pSearchInfo->quit) {
 				shutdown();
+				std::cout << "Bye." << std::endl;
 				break;
 			}
 
@@ -103,6 +109,7 @@ private:
 	U64 MemorySize = getMemorySize(STD_HASHTABLE_MB, STD_THREAD);
 	ChessThreadManager* pTaskManager = nullptr;
 	Chessboard* pChessboard = nullptr;
+	MemoryBlock* pMemory = nullptr;
 	short SearchMode = 0;
 	
 
@@ -122,17 +129,23 @@ private:
 		ThreadNum = _ThreadNum;
 		MemorySize = _MemorySize;
 
+		if (!_InitFrameMemorySystem<FrameReInit>(MemorySize, 4))
+			error_exit("UCI: _InitFrameMemorySystem<FrameReInit> failed!");;
+
 		init();
 	}
 
 	void shutdown(void) {
 		pTaskManager->Shutdown();
-		destroyHashTable();
-		_ShutdownFrameMemorySystem();
+		destroyHashTable();		
+		delete pChessboard;
+		delete pMemory;
 	}
 
 	void init(void) {
-		_InitFrameMemorySystem(MemorySize, 4);
+		pMemory = new MemoryBlock();
+		pMemory->init(THREAD_MEMORY_SIZE, ThreadHeap);
+		pChessboard = newChessboard(pMemory);
 		// init threads
 		pTaskManager->Startup(ThreadNum);
 		// init hash

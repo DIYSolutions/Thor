@@ -29,6 +29,21 @@ public:
 		}
 	}
 
+	inline U64* getPvLine(U64* MovePtr, const short movesLeft) {
+		if (movesLeft) {
+			U64 Move = ProbePvMove(PosKey);
+			if (Move != 0ULL) {
+				// is Move part of current movelist?
+				*(MovePtr++) = Move;
+				doMove(&Move);
+				return getPvLine(MovePtr, movesLeft - 1);
+			}
+		}
+		while (Ply > 0)
+			undoMove();
+		return MovePtr;
+	}
+
 	inline void doMove(U64* Move) {
 		if (Side == WHITE)
 			return DoMove<WHITE>(Move);
@@ -53,6 +68,25 @@ public:
 
 	inline const U64 getPosKey(void) { return PosKey; }
 
+	inline void GenThreadMessage(S_ThreadMessage * msg) {
+		msg->Side = Side;
+		msg->EnPas = EnPas;
+		msg->FiftyMove = FiftyMove;
+		msg->CastlePerm = CastlePerm;
+		msg->PosKey = PosKey;
+		msg->PiecesBB[0] = PiecesBB[0];
+		msg->PiecesBB[1] = PiecesBB[1];
+		msg->PiecesBB[2] = PiecesBB[2];
+		msg->PiecesBB[3] = PiecesBB[3];
+		msg->PiecesBB[4] = PiecesBB[4];
+		msg->PiecesBB[5] = PiecesBB[5];
+		msg->PiecesBB[6] = PiecesBB[6];
+		msg->PiecesBB[7] = PiecesBB[7];
+		msg->PiecesBB[8] = PiecesBB[8];
+		msg->PiecesBB[9] = PiecesBB[9];
+		msg->PiecesBB[10] = PiecesBB[10];
+		msg->PiecesBB[11] = PiecesBB[11];
+	}
 	inline S_ThreadMessage* GenThreadMessage(const short Mode, const short Depth) {
 		return NewThreadMessage(Side, EnPas, FiftyMove, CastlePerm, PiecesBB, PosKey, Mode, Depth);
 	}
@@ -80,6 +114,7 @@ public:
 
 	inline short SideToMove(void) { return Side; }
 	inline short HistoryPly(void) { return HisPly; }
+	inline short SearchPly(void) { return Ply; }
 
 	inline bool ParseFEN(char * fen) {
 		short  rank = RANK_8;
@@ -181,30 +216,30 @@ public:
 
 	inline short getPieceType(const short SQ) {
 		U64 thisSQ = SetMask[SQ];
-		if (thisSQ && PiecesBB[WhitePawn])
+		if (thisSQ & PiecesBB[WhitePawn])
 			return WhitePawn;
-		if (thisSQ && PiecesBB[WhiteKnight])
+		if (thisSQ & PiecesBB[WhiteKnight])
 			return WhiteKnight;
-		if (thisSQ && PiecesBB[WhiteBishop])
+		if (thisSQ & PiecesBB[WhiteBishop])
 			return WhiteBishop;
-		if (thisSQ && PiecesBB[WhiteRook])
+		if (thisSQ & PiecesBB[WhiteRook])
 			return WhiteRook;
-		if (thisSQ && PiecesBB[WhiteQueen])
+		if (thisSQ & PiecesBB[WhiteQueen])
 			return WhiteQueen;
-		if (thisSQ && PiecesBB[WhiteKing])
+		if (thisSQ & PiecesBB[WhiteKing])
 			return WhiteKing;
 
-		if (thisSQ && PiecesBB[BlackPawn])
+		if (thisSQ & PiecesBB[BlackPawn])
 			return BlackPawn;
-		if (thisSQ && PiecesBB[BlackKnight])
+		if (thisSQ & PiecesBB[BlackKnight])
 			return BlackKnight;
-		if (thisSQ && PiecesBB[BlackBishop])
+		if (thisSQ & PiecesBB[BlackBishop])
 			return BlackBishop;
-		if (thisSQ && PiecesBB[BlackRook])
+		if (thisSQ & PiecesBB[BlackRook])
 			return BlackRook;
-		if (thisSQ && PiecesBB[BlackQueen])
+		if (thisSQ & PiecesBB[BlackQueen])
 			return BlackQueen;
-		if (thisSQ && PiecesBB[BlackKing])
+		if (thisSQ & PiecesBB[BlackKing])
 			return BlackKing;
 		return Empty;
 	}
@@ -220,7 +255,7 @@ public:
 				printf("%c  ", PceChar[getPieceType(FR2SQ(file, rank))][0]);
 			printf("\n");
 		}
-
+		
 		printf("\n  ");
 		for (file = FILE_A; file <= FILE_H; file++) {
 			printf("%3c", 'a' + file);
@@ -235,6 +270,12 @@ public:
 			CastlePerm & BQCA ? 'q' : '-'
 		);
 		printf("PosKey:%llX\n", PosKey);
+#ifdef PRINTBOARDDEBUG
+		for (short i = 0; i < Empty; i++) {
+			printf("%s:\n", piece_names[i]);
+			PrintBitboard(PiecesBB[i]);
+		}
+#endif
 		printing_console_end();
 	}
 private:

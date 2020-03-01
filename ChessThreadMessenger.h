@@ -12,6 +12,8 @@ typedef struct S_ThreadMessage {
 	
 	short Mode = 0;
 	short Depth = 0;
+	BoardValue Alpha = MIN_INFINTE;
+	BoardValue Beta = MAX_INFINTE;
 	S_ThreadMessage* next = nullptr;
 } S_ThreadMessage;
 
@@ -20,6 +22,13 @@ static int _ThreadMessagesNumEntrys = 0;
 static S_ThreadMessage _ThreadMessagesRoot;
 static std::atomic_flag _ThreadMessagesLock;
 
+inline const bool MessageAvailable(void) {
+	while (_ThreadMessagesLock.test_and_set(std::memory_order_acquire)) // acquire lock
+		; // spin
+	bool ret = _ThreadMessagesRoot.next;
+	_ThreadMessagesLock.clear(std::memory_order_release);
+	return ret;
+}
 
 inline S_ThreadMessage* getThreadMessage(const int id) {
 	if (id >= _ThreadMessagesNumEntrys)
@@ -38,8 +47,10 @@ void InitMessageContainer(void) {
 inline S_ThreadMessage* getThreadMessage(void) {
 	while (_ThreadMessagesLock.test_and_set(std::memory_order_acquire)) // acquire lock
 		; // spin
-	if (!_ThreadMessagesRoot.next)
-		error_exit("S_ThreadMessage* getThreadMessage(void): failed!");
+	if (!_ThreadMessagesRoot.next) {
+		_ThreadMessagesLock.clear(std::memory_order_release);
+		return nullptr;
+	}
 	S_ThreadMessage* ret = _ThreadMessagesRoot.next;
 	_ThreadMessagesRoot.next = _ThreadMessagesRoot.next->next;
 	_ThreadMessagesLock.clear(std::memory_order_release);

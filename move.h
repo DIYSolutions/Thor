@@ -1,6 +1,5 @@
 #pragma once
 #include "bitboard.h"
-constexpr U64 NOMOVE = 0ULL;
 
 typedef struct S_MOVE {
 	U64 Move = 0ULL;
@@ -430,5 +429,55 @@ inline bool IsEndgame(const U64* piecesListBB) {
 	return false;
 }
 
-constexpr BoardValue AttackFaktor = 50;
-constexpr BoardValue MobilityFaktor = 10;
+
+constexpr short FilesBrd[64] = {
+	FILE_A,FILE_B,FILE_C,FILE_D,FILE_E,FILE_F,FILE_G,FILE_H,
+	FILE_A,FILE_B,FILE_C,FILE_D,FILE_E,FILE_F,FILE_G,FILE_H,
+	FILE_A,FILE_B,FILE_C,FILE_D,FILE_E,FILE_F,FILE_G,FILE_H,
+	FILE_A,FILE_B,FILE_C,FILE_D,FILE_E,FILE_F,FILE_G,FILE_H,
+	FILE_A,FILE_B,FILE_C,FILE_D,FILE_E,FILE_F,FILE_G,FILE_H,
+	FILE_A,FILE_B,FILE_C,FILE_D,FILE_E,FILE_F,FILE_G,FILE_H,
+	FILE_A,FILE_B,FILE_C,FILE_D,FILE_E,FILE_F,FILE_G,FILE_H,
+	FILE_A,FILE_B,FILE_C,FILE_D,FILE_E,FILE_F,FILE_G,FILE_H
+};
+
+constexpr short RanksBrd[64] = {
+	RANK_1,RANK_1,RANK_1,RANK_1,RANK_1,RANK_1,RANK_1,RANK_1,
+	RANK_2,RANK_2,RANK_2,RANK_2,RANK_2,RANK_2,RANK_2,RANK_2,
+	RANK_3,RANK_3,RANK_3,RANK_3,RANK_3,RANK_3,RANK_3,RANK_3,
+	RANK_4,RANK_4,RANK_4,RANK_4,RANK_4,RANK_4,RANK_4,RANK_4,
+	RANK_5,RANK_5,RANK_5,RANK_5,RANK_5,RANK_5,RANK_5,RANK_5,
+	RANK_6,RANK_6,RANK_6,RANK_6,RANK_6,RANK_6,RANK_6,RANK_6,
+	RANK_7,RANK_7,RANK_7,RANK_7,RANK_7,RANK_7,RANK_7,RANK_7,
+	RANK_8,RANK_8,RANK_8,RANK_8,RANK_8,RANK_8,RANK_8,RANK_8
+};
+
+char* PrMove(const U64 move) {
+
+	static char MvStr[6];
+
+	int promoted = MOVE_PROMOTED(move);
+	MvStr[0] = 'a' + FilesBrd[MOVE_FROMSQ(move)];
+	MvStr[1] = '1' + RanksBrd[MOVE_FROMSQ(move)];
+	MvStr[2] = 'a' + FilesBrd[MOVE_TOSQ(move)];
+	MvStr[3] = '1' + RanksBrd[MOVE_TOSQ(move)];
+	if (promoted) {
+		char pchar = 'q';
+		if (IsKnight(promoted)) {
+			pchar = 'n';
+		}
+		else if (IsRook(promoted)) {
+			pchar = 'r';
+		}
+		else if (IsBishop(promoted)) {
+			pchar = 'b';
+		}
+		MvStr[4] = pchar;
+		MvStr[5] = 0;
+	}
+	else {
+		MvStr[4] = 0;
+	}
+
+	return MvStr;
+}

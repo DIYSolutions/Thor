@@ -213,10 +213,8 @@ inline U64 ProbePvMove(const U64 posKey) {
 		return hashEntry->move;
 	}
 	hashEntry->lock.clear(std::memory_order_release);
-	return 0ULL;
+	return NOMOVE;
 }
-
-
 
 inline void ClearHashTable() {
 	for (U64 i = 0ULL; i < _pHashTable->numEntries; i++) {

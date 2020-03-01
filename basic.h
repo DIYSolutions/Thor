@@ -2,7 +2,6 @@
 typedef unsigned long long U64;
 typedef signed short BoardValue;
 
-
 #define ENGINE_NAME "Thor"
 #define ENGINE_AUTHOR "Torsten Baublies"
 #define START_FEN  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -25,13 +24,15 @@ constexpr BoardValue MAX_INFINTE = 32765;// 100 = one pawn
 constexpr BoardValue MIN_MATE = -30000;
 constexpr BoardValue MAX_MATE = 30000;
 
-
 constexpr BoardValue DRAW_VALUE = 0;// for better code reading
 constexpr BoardValue PAWN_VALUE = 100;
 constexpr BoardValue KNIGHT_VALUE = 325;
 constexpr BoardValue BISHOP_VALUE = 330;
 constexpr BoardValue ROOK_VALUE = 450;
 constexpr BoardValue QUEEN_VALUE = 900;
+
+constexpr BoardValue AttackFaktor = 50;
+constexpr BoardValue MobilityFaktor = 10;
 
 constexpr BoardValue PIECES_VALUES[12] = {
 	PAWN_VALUE,KNIGHT_VALUE,BISHOP_VALUE,ROOK_VALUE,QUEEN_VALUE,MAX_MATE,
@@ -69,6 +70,7 @@ void printing_console_end();
 void InitOutputLock();
 void print_console(const char* line, BoardValue value1, int value2);
 void print_console_str(const char* line, char* str);
+void PrintBitboard(U64 bb);
 
 #include <chrono>
 inline U64 GetMilliTime() {
@@ -167,3 +169,4 @@ typedef struct S_PinnedPiece {
 	S_PinnedPiece* next = nullptr;
 } S_PinnedPiece;
 
+constexpr U64 NOMOVE = 0ULL;

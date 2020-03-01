@@ -32,13 +32,15 @@ public:
 
 	void loop(void) {
 		S_ThreadMessage* msg = nullptr;
-		BoardValue Score = 0;
+		BoardValue Score = 0, Alpha = 0, Beta = 0;
 		ThreadStopped = false;
 		ThreadEnable = true;
 		std::chrono::milliseconds timespan(50); // 50ms	
 		ChessThreadMessenger* Message = MESSENGER;
 		Message->ThreadRunning();
 		short MaxDepth = 0;
+		U64 pv_moves[SEARCH_MAX_MOVES];
+		short pv_count = 0;
 	ThreadLoopBegin:
 		ThreadIdle = true;
 		Score = 0;
@@ -58,6 +60,8 @@ public:
 		pChessboard->SetThreadMessage(msg);
 		Mode = msg->Mode;
 		MaxDepth = msg->Depth;
+		Alpha = msg->Alpha;
+		Beta = msg->Beta;
 		releaseThreadMessage(msg);
 
 		switch (Mode) {
@@ -65,12 +69,7 @@ public:
 			ThreadSleep(timespan * 10);
 			print_console("ThreadPerftTest %d\n", _tid);
 			break;
-		case ThreadSubSearch:
-			_pSearchInfo->SubSearchNum++;
 		case ThreadMainSearch:
-			Message->putNewMessage(
-				pChessboard->GenThreadMessage(ThreadMinMaxSearch, 3)
-			);
 		case ThreadAloneSearch:
 			// do iterative deepening alphabeta search - MaxDepth == SEARCH_MAX_MOVES
 			while(Depth < MaxDepth) {
@@ -78,35 +77,47 @@ public:
 				if (_pSearchInfo->stopped)
 					break;
 
-				Score = AlphaBeta(++Depth, MIN_INFINTE, MAX_INFINTE);
+				Score = AlphaBeta(++Depth, Alpha, Beta);
 
 				if (_pSearchInfo->stopped)
 					break;
 
 				// get pv line
+				pv_count = pChessboard->getPvLine(pv_moves, SEARCH_MAX_MOVES) - pv_moves;
 				// print pv line 
+				// start Thread - Mode == ThreadPVSearch
+				// for each move in pv line
+				printing_console_start();
+				std::cout << "info score cp " << Score << " depth " << Depth << " nodes " << _pSearchInfo->nodes << " time " << (GetMilliTime() - _pSearchInfo->starttime);
 
-				// no other threads available if Mode != ThreadMainSearch
-				while (Message->ThreadAvailable()) {// while threads available
-					// start Thread - Mode == ThreadPVSearch
-					// for each move in pv line
-					// break if no pv line or last move reached
-				}
-				// now for each move in starting position
-				while (Message->ThreadAvailable()) {// while threads available
-					// start Thread - Mode == ThreadPVSearch
-					// break if last move reached
-				}
-				if (Mode == ThreadSubSearch) {
-					if (Depth >= _pSearchInfo->depth) {
-						_pSearchInfo->SubSearchNum--;
-						break;
+				std::cout << "pv";
+				for (short i = 0; i < pv_count; i++) {
+					std::cout << " " << PrMove(pv_moves[i]);
+					pChessboard->doMove(&pv_moves[i]);
+					msg = getThreadMessage();
+					if (msg) {
+						// while MessageContainer available
+						pChessboard->GenThreadMessage(msg);
+						msg->Depth = Depth - 1;
+						if (msg->Depth == 0)
+							msg->Depth = 1;
+						else if (msg->Depth > 10)
+							msg->Depth = 10;
+						msg->Alpha = Score - 150;
+						msg->Beta = Score + 150;
+						msg->Mode = ThreadPVSearch;
+						Message->putNewMessage(msg);
 					}
+
 				}
-				else {
-					_pSearchInfo->depth = Depth;
-					
-				}
+				while (pChessboard->SearchPly() > 0)
+					pChessboard->undoMove();
+
+				std::cout << std::endl;
+				printing_console_end();
+
+				_pSearchInfo->depth = Depth;					
+				
 			}
 			//cleanup if Mode == ThreadMainSearch
 			if (Mode == ThreadMainSearch)
@@ -117,7 +128,7 @@ public:
 			// do iterative deepening alphabeta search - MaxDepth == 10
 			while (Depth < MaxDepth) {
 				// manage all other threads if Mode == ThreadMainSearch
-				Score = AlphaBeta(++Depth, MIN_INFINTE, MAX_INFINTE);
+				Score = AlphaBeta(++Depth, Alpha, Beta);
 				if (_pSearchInfo->stopped)
 					break;
 			}

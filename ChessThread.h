@@ -36,25 +36,28 @@ public:
 		ThreadStopped = false;
 		ThreadEnable = true;
 		std::chrono::milliseconds timespan(50); // 50ms	
-		MESSENGER->ThreadRunning();
+		ChessThreadMessenger* Message = MESSENGER;
+		Message->ThreadRunning();
+		short MaxDepth = 0;
 	ThreadLoopBegin:
 		ThreadIdle = true;
 		Score = 0;
 		Depth = 0;
 
-		MESSENGER->ThreadWaiting();
-		msg = MESSENGER->getNewMessage();
+		Message->ThreadWaiting();
+		msg = Message->getNewMessage();
 		while (!msg) {
 			if (!ThreadEnable || _pSearchInfo->stopped)
 				goto ThreadLoopEnd;
 			ThreadSleep(timespan);
-			msg = MESSENGER->getNewMessage();
+			msg = Message->getNewMessage();
 		}
-		MESSENGER->ThreadWorking();
+		Message->ThreadWorking();
 		ThreadIdle = false;
 		// set up chessboard by S_ThreadMessage
 		pChessboard->SetThreadMessage(msg);
 		Mode = msg->Mode;
+		MaxDepth = msg->Depth;
 		releaseThreadMessage(msg);
 
 		switch (Mode) {
@@ -65,12 +68,12 @@ public:
 		case ThreadSubSearch:
 			_pSearchInfo->SubSearchNum++;
 		case ThreadMainSearch:
-			MESSENGER->putNewMessage(
-				pChessboard->GenThreadMessage(ThreadMinMaxSearch)
+			Message->putNewMessage(
+				pChessboard->GenThreadMessage(ThreadMinMaxSearch, 3)
 			);
 		case ThreadAloneSearch:
 			// do iterative deepening alphabeta search - MaxDepth == SEARCH_MAX_MOVES
-			while(Depth < SEARCH_MAX_MOVES) {
+			while(Depth < MaxDepth) {
 
 				if (_pSearchInfo->stopped)
 					break;
@@ -84,13 +87,13 @@ public:
 				// print pv line 
 
 				// no other threads available if Mode != ThreadMainSearch
-				while (MESSENGER->ThreadAvailable()) {// while threads available
+				while (Message->ThreadAvailable()) {// while threads available
 					// start Thread - Mode == ThreadPVSearch
 					// for each move in pv line
 					// break if no pv line or last move reached
 				}
 				// now for each move in starting position
-				while (MESSENGER->ThreadAvailable()) {// while threads available
+				while (Message->ThreadAvailable()) {// while threads available
 					// start Thread - Mode == ThreadPVSearch
 					// break if last move reached
 				}
@@ -107,12 +110,12 @@ public:
 			}
 			//cleanup if Mode == ThreadMainSearch
 			if (Mode == ThreadMainSearch)
-				while (MESSENGER->getNewMessage());
+				while (Message->getNewMessage());
 			
 			break;
 		case ThreadPVSearch:
 			// do iterative deepening alphabeta search - MaxDepth == 10
-			while (Depth < 10) {
+			while (Depth < MaxDepth) {
 				// manage all other threads if Mode == ThreadMainSearch
 				Score = AlphaBeta(++Depth, MIN_INFINTE, MAX_INFINTE);
 				if (_pSearchInfo->stopped)
@@ -121,7 +124,7 @@ public:
 			break;
 		case ThreadMinMaxSearch:
 			// do minmax search - MaxDepth == 4
-			MinMax(4);
+			MinMax(MaxDepth);
 			break;
 		default:
 			break;
@@ -130,7 +133,7 @@ public:
 			goto ThreadLoopBegin;
 	ThreadLoopEnd:
 		ThreadStopped = true;
-		MESSENGER->ThreadStopped();
+		Message->ThreadStopped();
 	}
 	
 	inline void StopThread(void) { ThreadEnable = false; _pSearchInfo->stopped = true; }

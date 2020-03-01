@@ -15,15 +15,38 @@ constexpr int MAX_THREAD = 128;
 constexpr int STD_THREAD = 1;
 constexpr int STD_HASHTABLE_MB = 64;// size in MB
 constexpr int MAX_HASHTABLE_MB = 64 * 1024;// size in MB
-constexpr int THREAD_MEMORY_MB = 1;// size in MB
+constexpr int THREAD_MEMORY_MB = 3;// size in MB
 constexpr int THREAD_MEMORY_SIZE = THREAD_MEMORY_MB * 1024 * 1024;// size in byte
 constexpr int THREAD_MESSENGER_SIZE = 1024 * 1024;// size in byte
-constexpr inline U64 getMemorySize(const U64 hash_mb, const short thread_num) { return (hash_mb  * 1024 * 1024) + (U64)(THREAD_MEMORY_SIZE * ((int)thread_num + 1)) + 1024; };
+constexpr inline U64 getMemorySize(const U64 hash_mb, const short thread_num) { return (hash_mb  * 1024 * 1024) + (((U64)THREAD_MEMORY_SIZE) * ((U64)thread_num + 1)); };
 
-constexpr signed short MIN_INFINTE = -32765;
-constexpr signed short MAX_INFINTE = 32765;// 100 = one pawn
-constexpr signed short MIN_MATE = -30000;
-constexpr signed short MAX_MATE = 30000;
+constexpr BoardValue MIN_INFINTE = -32765;
+constexpr BoardValue MAX_INFINTE = 32765;// 100 = one pawn
+constexpr BoardValue MIN_MATE = -30000;
+constexpr BoardValue MAX_MATE = 30000;
+
+
+constexpr BoardValue DRAW_VALUE = 0;// for better code reading
+constexpr BoardValue PAWN_VALUE = 100;
+constexpr BoardValue KNIGHT_VALUE = 325;
+constexpr BoardValue BISHOP_VALUE = 330;
+constexpr BoardValue ROOK_VALUE = 450;
+constexpr BoardValue QUEEN_VALUE = 900;
+
+constexpr BoardValue PIECES_VALUES[12] = {
+	PAWN_VALUE,KNIGHT_VALUE,BISHOP_VALUE,ROOK_VALUE,QUEEN_VALUE,MAX_MATE,
+	-PAWN_VALUE,-KNIGHT_VALUE,-BISHOP_VALUE,-ROOK_VALUE,-QUEEN_VALUE,MIN_MATE
+};
+
+constexpr BoardValue PIECES_VALUES_ABS[12] = {
+	PAWN_VALUE,KNIGHT_VALUE,BISHOP_VALUE,ROOK_VALUE,QUEEN_VALUE,MAX_MATE,
+	PAWN_VALUE,KNIGHT_VALUE,BISHOP_VALUE,ROOK_VALUE,QUEEN_VALUE,MAX_MATE
+};
+
+constexpr BoardValue PIECES_CAPTURE_VALUES[12] = {
+	5,4,3,2,1,0,
+	5,4,3,2,1,0
+};
 
 enum { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, FILE_NONE };
 enum { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_NONE };
@@ -44,7 +67,7 @@ void print_console_str(char* str);
 void print_console_endl();
 void printing_console_end();
 void InitOutputLock();
-void print_console(const char* line, signed short value1, int value2);
+void print_console(const char* line, BoardValue value1, int value2);
 void print_console_str(const char* line, char* str);
 
 #include <chrono>
@@ -140,5 +163,7 @@ typedef struct S_PinnedPiece {
 	short pinner_sq = NO_SQ;
 	short attack_sq = NO_SQ;
 	U64 blockingBB = 0ULL;
+	bool absolutePin = false;
+	S_PinnedPiece* next = nullptr;
 } S_PinnedPiece;
 

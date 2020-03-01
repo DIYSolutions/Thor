@@ -11,6 +11,7 @@ typedef struct S_ThreadMessage {
 	U64 PosKey = 0ULL;
 	
 	short Mode = 0;
+	short Depth = 0;
 	S_ThreadMessage* next = nullptr;
 } S_ThreadMessage;
 
@@ -52,7 +53,8 @@ inline S_ThreadMessage* NewThreadMessage(const short Side,
 	const short CastlePerm,
 	const U64* PiecesBB,
 	const U64 PosKey,
-	const short Mode) {
+	const short Mode,
+	const short Depth) {
 
 	S_ThreadMessage* ret = getThreadMessage();
 	ret->Side = Side;
@@ -61,6 +63,7 @@ inline S_ThreadMessage* NewThreadMessage(const short Side,
 	ret->CastlePerm = CastlePerm;
 	ret->PosKey = PosKey;
 	ret->Mode = Mode;
+	ret->Depth = Depth;
 	ret->PiecesBB[0] = PiecesBB[0];
 	ret->PiecesBB[1] = PiecesBB[1];
 	ret->PiecesBB[2] = PiecesBB[2];

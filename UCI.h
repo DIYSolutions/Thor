@@ -7,11 +7,15 @@ class UCI
 {
 public:
 	UCI() {
+		InitOutputLock();
 		InitMessageContainer();
 		InitSearchinfo();
+		Message = MESSENGER;
+
 		pTaskManager = new ChessThreadManager();
 		if (!_InitFrameMemorySystem<FrameInit>(MemorySize, 4))
 			error_exit("UCI: _InitFrameMemorySystem<FrameInit> failed!");;
+
 		init();
 	}
 
@@ -64,9 +68,9 @@ public:
 				printing_console_end();
 			}
 			else if (!strncmp(line, "debug", 4)) {
-				for (int i = 0; i < MESSENGER->ThreadsRunningNum(); i++)
-					pTaskManager->putNewMessage(
-						pChessboard->GenThreadMessage(ThreadPerftTest)
+				for (int i = 0; i < Message->ThreadsRunningNum(); i++)
+					Message->putNewMessage(
+						pChessboard->GenThreadMessage(ThreadPerftTest, 0)
 					);
 			}
 			else if (!strncmp(line, "setoption name Threads value ", 29)) {
@@ -110,6 +114,7 @@ private:
 	ChessThreadManager* pTaskManager = nullptr;
 	Chessboard* pChessboard = nullptr;
 	MemoryBlock* pMemory = nullptr;
+	ChessThreadMessenger* Message = nullptr;
 	short SearchMode = 0;
 	
 
@@ -118,8 +123,8 @@ private:
 		_pSearchInfo->fhf = 0;
 		_pSearchInfo->nodes = 0;
 		_pSearchInfo->nullCut = 0;
-		pTaskManager->putNewMessage(
-			pChessboard->GenThreadMessage(SearchMode)
+		Message->putNewMessage(
+			pChessboard->GenThreadMessage(SearchMode, SEARCH_MAX_MOVES)
 		);
 	}
 
@@ -250,17 +255,18 @@ private:
 
 		ptrChar = strstr(lineIn, "moves");
 		U64 move;
-
+		S_MemoryFrame Frame = pMemory->GetMemoryFrame(ThreadHeap);
 		if (ptrChar != NULL) {
 			ptrChar += 6;
 			while (*ptrChar) {
 				move = ParseMove(ptrChar);
-				if (move == 0ULL) break;
+				if (move == NOMOVE) break;
 				pChessboard->doMove(&move);
 				while (*ptrChar && *ptrChar != ' ') ptrChar++;
 				ptrChar++;
 			}
 		}
+		pMemory->ReleaseMemoryFrame(&Frame);
 		pChessboard->setPly(0);
 		pChessboard->PrintBoard();
 	}
@@ -273,9 +279,10 @@ private:
 		int from = FR2SQ(ptrChar[0] - 'a', ptrChar[1] - '1');
 		int to = FR2SQ(ptrChar[2] - 'a', ptrChar[3] - '1');
 
-
+		
 		S_MOVELIST list;
-		list.count = pChessboard->genMove(list.MovePtr) - list.MovePtr;
+		list.MovePtr = (S_MOVE*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(S_MOVE) * BOARD_MAX_MOVES);
+		list.count = pChessboard->genMove(list.MovePtr);
 		int MoveNum = 0;
 		U64 Move = 0;
 		int PromPce = Empty;
@@ -300,6 +307,7 @@ private:
 					ASSERT(false);
 					continue;
 				}
+				
 				return Move;
 			}
 		}

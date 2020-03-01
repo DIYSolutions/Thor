@@ -85,6 +85,9 @@ void printing_console_end() {
 	lock.clear(std::memory_order_release); // release lock
 }
 
+void print_search_info(const BoardValue Score, const short Depth, U64 nodes, U64 timems){
+	std::cout << "info score cp " << Score << " depth " << Depth << " nodes " << nodes << " time " << timems;
+}
 
 void PrintBitboard(U64 bb) {
 

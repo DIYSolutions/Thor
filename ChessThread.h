@@ -7,11 +7,12 @@
 #include <windows.h>
 #include <thread>
 
-enum ThreadTask { ThreadPerftTest, ThreadAloneSearch, ThreadMainSearch, ThreadSubSearch, ThreadPVSearch, ThreadMinMaxSearch };
+enum ThreadTask { ThreadPerftTest, ThreadPerftTestStart, ThreadAloneSearch, ThreadMainSearch, ThreadSubSearch, ThreadPVSearch, ThreadMinMaxSearch };
 
 inline void ThreadSleep(std::chrono::milliseconds timespan) {
 	std::this_thread::sleep_for(timespan);
 }
+std::chrono::milliseconds StdSleepTime(50); // 50ms
 
 class ChessThread
 {
@@ -35,12 +36,16 @@ public:
 		BoardValue Score = 0, Alpha = 0, Beta = 0;
 		ThreadStopped = false;
 		ThreadEnable = true;
-		std::chrono::milliseconds timespan(50); // 50ms	
+			
 		ChessThreadMessenger* Message = MESSENGER;
 		Message->ThreadRunning();
 		short MaxDepth = 0;
-		U64 pv_moves[SEARCH_MAX_MOVES];
+		U64 pv_moves[BOARD_MAX_MOVES];
 		short pv_count = 0;
+		S_MOVE* perft_moves;
+		short perft_count = 0;
+		S_MemoryFrame ThreadMemoryFrame;
+		U64 nodes = 0ULL;
 	ThreadLoopBegin:
 		ThreadIdle = true;
 		Score = 0;
@@ -51,7 +56,7 @@ public:
 		while (!msg) {
 			if (!ThreadEnable || _pSearchInfo->stopped)
 				goto ThreadLoopEnd;
-			ThreadSleep(timespan);
+			ThreadSleep(StdSleepTime);
 			msg = Message->getNewMessage();
 		}
 		Message->ThreadWorking();
@@ -66,8 +71,39 @@ public:
 
 		switch (Mode) {
 		case ThreadPerftTest:
-			ThreadSleep(timespan * 10);
-			print_console("ThreadPerftTest %d\n", _tid);
+			nodes = 0ULL;
+			// get moves from this position
+			ThreadMemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
+
+			perft_moves = (S_MOVE*)pMemory->AllocFrameMemory(sizeof(S_MOVE) * BOARD_MAX_MOVES);
+			perft_count = pChessboard->genMove(perft_moves);
+			// for each move
+			if (MaxDepth == 1)
+				_pSearchInfo->nodes += perft_count;
+			else {
+				for (short i = 0; i < perft_count; i++) {
+					pChessboard->doMove(&perft_moves[i].Move);
+					msg = getThreadMessage();
+					if (!msg) {
+						if (pChessboard->SideToMove() == WHITE) {
+							nodes += PerftTest<WHITE>(MaxDepth);
+						}
+						else {
+							nodes += PerftTest<BLACK>(MaxDepth);
+						}
+					}
+					else {
+						pChessboard->GenThreadMessage(msg);
+						msg->Depth = MaxDepth - 1;
+						msg->Mode = ThreadPerftTest;
+						Message->putNewMessage(msg);
+					}
+					pChessboard->undoMove();
+				}
+				_pSearchInfo->nodes += nodes;
+			}
+
+			pMemory->ReleaseMemoryFrame(&ThreadMemoryFrame);
 			break;
 		case ThreadMainSearch:
 		case ThreadAloneSearch:
@@ -88,11 +124,11 @@ public:
 				// start Thread - Mode == ThreadPVSearch
 				// for each move in pv line
 				printing_console_start();
-				std::cout << "info score cp " << Score << " depth " << Depth << " nodes " << _pSearchInfo->nodes << " time " << (GetMilliTime() - _pSearchInfo->starttime);
-
-				std::cout << "pv";
+				print_search_info(Score, Depth, _pSearchInfo->nodes, GetMilliTime() - _pSearchInfo->starttime);
+				print_console_str('pv');
 				for (short i = 0; i < pv_count; i++) {
-					std::cout << " " << PrMove(pv_moves[i]);
+					print_console_str(' ');
+					print_console_str(PrMove(pv_moves[i]));
 					pChessboard->doMove(&pv_moves[i]);
 					msg = getThreadMessage();
 					if (msg) {
@@ -113,7 +149,7 @@ public:
 				while (pChessboard->SearchPly() > 0)
 					pChessboard->undoMove();
 
-				std::cout << std::endl;
+				print_console_endl();
 				printing_console_end();
 
 				_pSearchInfo->depth = Depth;					
@@ -188,5 +224,26 @@ private:
 	}
 	BoardValue Quiescence(const short Depth) {
 		return 0;
+	}
+
+	template <Colors Us>
+	U64 PerftTest(const short Depth) {
+		constexpr Colors Them = Us == WHITE ? BLACK : WHITE;
+		if (Depth) {
+			S_MemoryFrame PerftMemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
+			U64 nodes = 0;
+			S_MOVE* MovePtr = (S_MOVE *)pMemory->AllocFrameMemory(sizeof(MovePtr) * BOARD_MAX_MOVES);
+			short MoveCount = pChessboard->GenMove<Us>(MovePtr) - MovePtr;
+			for (short i = 0; i < MoveCount; i++) {
+				pChessboard->DoMove<Us>(&MovePtr[i].Move);
+				nodes += PerftTest<Them>(Depth - 1);
+				pChessboard->UndoMove<Us>();
+			}
+			pMemory->ReleaseMemoryFrame(&PerftMemoryFrame);
+			return nodes;
+		}
+		else {
+			return 1ULL;
+		}
 	}
 };

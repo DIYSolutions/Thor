@@ -278,6 +278,464 @@ public:
 #endif
 		printing_console_end();
 	}
+
+
+	template <Colors Us>
+	inline S_MOVE* GenMove(S_MOVE* MovePtr) {
+		constexpr short myPAWN = Us == WHITE ? WhitePawn : BlackPawn;
+		constexpr short myKNIGHT = Us == WHITE ? WhiteKnight : BlackKnight;
+		constexpr short myBISHOP = Us == WHITE ? WhiteBishop : BlackBishop;
+		constexpr short myROOK = Us == WHITE ? WhiteRook : BlackRook;
+		constexpr short myQUEEN = Us == WHITE ? WhiteQueen : BlackQueen;
+		constexpr short myKING = Us == WHITE ? WhiteKing : BlackKing;
+
+		constexpr short enPAWN = Us == BLACK ? WhitePawn : BlackPawn;
+		constexpr short enKNIGHT = Us == BLACK ? WhiteKnight : BlackKnight;
+		constexpr short enBISHOP = Us == BLACK ? WhiteBishop : BlackBishop;
+		constexpr short enROOK = Us == BLACK ? WhiteRook : BlackRook;
+		constexpr short enQUEEN = Us == BLACK ? WhiteQueen : BlackQueen;
+		constexpr short enKING = Us == BLACK ? WhiteKing : BlackKing;
+
+		constexpr U64 KingCastleFreeBB = Us == WHITE ? WhiteKingCastleFree : BlackKingCastleFree;
+		constexpr U64 QueenCastleFreeBB = Us == WHITE ? WhiteQueenCastleFree : BlackQueenCastleFree;
+		constexpr U64 KingCastleCheckBB = Us == WHITE ? WhiteKingCastleCheck : BlackKingCastleCheck;
+		constexpr U64 QueenCastleCheckBB = Us == WHITE ? WhiteQueenCastleCheck : BlackQueenCastleCheck;
+		constexpr U64 CastleRightsBB = Us == WHITE ? WKCA | WQCA : BKCA | BQCA;
+		constexpr U64 CastleKingSideBB = Us == WHITE ? WKCA : BKCA;
+		constexpr U64 CastleQueenSideBB = Us == WHITE ? WQCA : BQCA;
+		constexpr short CastleFrom = Us == WHITE ? E1 : E8;
+		constexpr short CastleKingSideTo = Us == WHITE ? G1 : G8;
+		constexpr short CastleQueenSideTo = Us == WHITE ? C1 : C8;
+
+		constexpr U64 Rank8BB = Us == WHITE ? the8Rank : the1Rank;
+		constexpr U64 Rank2BB = Us == WHITE ? the2Rank : the7Rank;
+
+		constexpr const short (*getMyPieceType)(const U64*, const short) = (Us == WHITE ? getWhitePieceType : getBlackPieceType);
+		constexpr const short (*getEnPieceType)(const U64*, const short) = (Us == WHITE ? getBlackPieceType : getWhitePieceType);
+
+		constexpr U64(*getMyPiecesBB)(const U64*) = (Us == WHITE ? getWhitePiecesBB : getBlackPiecesBB);
+		constexpr U64(*getEnPiecesBB)(const U64*) = (Us == WHITE ? getBlackPiecesBB : getWhitePiecesBB);
+
+
+		PremoveBBNormalExec = MOVE_NEW_PREMOVE_U64(NormalExec, CastlePerm, FiftyMove, EnPas);
+		PremoveBBPawnDoubleMove = MOVE_NEW_PREMOVE_U64(PawnDoubleMove, CastlePerm, FiftyMove, EnPas);
+		PremoveBBCapture = MOVE_NEW_PREMOVE_U64(Capture, CastlePerm, FiftyMove, EnPas);
+		PremoveBBPromote = MOVE_NEW_PREMOVE_U64(Promote, CastlePerm, FiftyMove, EnPas);
+		PremoveBBPromoteCapture = MOVE_NEW_PREMOVE_U64(PromoteCapture, CastlePerm, FiftyMove, EnPas);
+		PremoveBBCastle = MOVE_NEW_PREMOVE_U64(Castle, CastlePerm, FiftyMove, EnPas);
+
+		EnAttackBB = InCheckBlockingSQ_BB = InCheckAttackSQ_BB = PinnedPiecesBB = 0ULL;
+		InCheckNum = 0;
+
+		Opening = IsOpening<Us>(PiecesBB);
+		if (Opening)
+			Endgame = false;
+		else
+			Endgame = IsEndgame(PiecesBB);
+
+		myKingBB = PiecesBB[myKING];
+		myKingSQ = PopBit(&myKingBB);
+		SetBit(&myKingBB, myKingSQ);
+
+		friends = getMyPiecesBB(PiecesBB);
+		enemys = getEnPiecesBB(PiecesBB);
+		allPiecesBB = friends | enemys;
+		emptyBB = ~allPiecesBB;
+
+		getEnemyAttack<enPAWN>(PiecesBB[enPAWN]);
+		getPinByAttackSQ<Us, true>(myKingSQ);
+		// get enPas
+		if (EnPas != NO_SQ) {
+			// get rid of EnPas-calc by check while doing move if any possible
+			U64 EnPasPieceBB = (Us == WHITE ? (AttackBrdbPawnBB[EnPas]) : (AttackBrdwPawnBB[EnPas])) & PiecesBB[myPAWN];
+			if (EnPasPieceBB) {
+				PremoveBBEnPassant = MOVE_NEW_PREMOVE_U64(EnPassant, CastlePerm, FiftyMove, EnPas);
+				while (EnPasPieceBB) {
+					//MOVE_NEW_MOVE(int mod, int f, int t, int mov, int ca, int pro, int cp, int fm, int ep)		
+
+					U64 tempMove = MOVE_NEW_U64(PopBit(&EnPasPieceBB), EnPas, myPAWN, Empty, Empty, PremoveBBEnPassant);
+					//make EnPas move and check valid or not
+					DoMove<Us>(&tempMove);
+					U64 _allPiecesBB = getWhitePiecesBB(PiecesBB) | getBlackPiecesBB(PiecesBB);
+					// now check attacks from king_sq - only sliding moves are possible checks
+					// save move if not in check			
+					if (((magicGetBishopAttackBB(myKingSQ, _allPiecesBB) & (PiecesBB[enQUEEN] | PiecesBB[enBISHOP])) | (magicGetRookAttackBB(myKingSQ, _allPiecesBB) & (PiecesBB[enQUEEN] | PiecesBB[enROOK]))) == 0ULL) {
+						MovePtr = NEW_MOVE(MovePtr, tempMove, PIECES_VALUES_ABS[enPAWN] + 1000);
+					}
+					UndoMove<Us>();
+				}
+			}
+		}
+		InCheck = InCheckAttackSQ_BB != 0ULL;
+
+		// get king moves
+		U64 tempAttackBB = AttackBrdKingBB[myKingSQ] & ~EnAttackBB;
+		//king moves
+		U64 PieceAttacksBB = tempAttackBB & emptyBB;
+		while (PieceAttacksBB) {
+			toSQ = PopBit(&PieceAttacksBB);
+			NEW_MOVE(
+				MovePtr,
+				myKingSQ,
+				toSQ,
+				myKING,
+				Empty,
+				Empty,
+				PremoveBBNormalExec,
+				getMoveValue(myKING, myKingSQ, toSQ)
+			);
+		}
+
+		PieceAttacksBB = tempAttackBB & enemys;
+		while (PieceAttacksBB) {
+			toSQ = PopBit(&PieceAttacksBB);
+			NEW_MOVE(
+				MovePtr,
+				myKingSQ,
+				toSQ,
+				myKING,
+				getEnPieceType(PiecesBB, toSQ),
+				Empty,
+				PremoveBBCapture,
+				getMoveValue(myKING, myKingSQ, toSQ)
+			);
+		}
+		U64 MoveBB;
+
+		if (InCheck)
+			goto KingInCheck;
+		// ---------------------------------------
+		//		king NOT in check area
+		// ---------------------------------------
+
+				// castle
+		if (CastleRightsBB & CastlePerm) {
+			if (CastleKingSideBB & CastlePerm)
+				if ((allPiecesBB & KingCastleFreeBB) == 0ULL)
+					if ((EnAttackBB & KingCastleCheckBB) == 0ULL)
+						NEW_MOVE(
+							MovePtr,
+							CastleFrom,
+							CastleKingSideTo,
+							myKING,
+							Empty,
+							Empty,
+							PremoveBBCastle,
+							getMoveValue(myKING, CastleFrom, CastleKingSideTo) + (Endgame ? -10 : 100)
+						);
+
+			if (CastleQueenSideBB & CastlePerm)
+				if ((allPiecesBB & QueenCastleFreeBB) == 0ULL)
+					if ((EnAttackBB & QueenCastleCheckBB) == 0ULL)
+						NEW_MOVE(
+							MovePtr,
+							CastleFrom,
+							CastleQueenSideTo,
+							myKING,
+							Empty,
+							Empty,
+							PremoveBBCastle,
+							getMoveValue(myKING, CastleFrom, CastleQueenSideTo) + (Endgame ? -10 : 100)
+						);
+		}
+
+		// pawn moves
+		MoveBB = PiecesBB[myPAWN];
+		while (MoveBB) {
+			fromSQ = PopBit(&MoveBB);
+
+			// -> normal move
+			tempAttackBB = getPawnMoveBoard<Us>(fromSQ) & emptyBB;
+			if (tempAttackBB) {
+				// rank 2? -> double move
+				if (SetMask[fromSQ] & Rank2BB) {
+					// + normal move
+					NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						getPawnMoveSQ<Us>(fromSQ),
+						myPAWN,
+						Empty,
+						Empty,
+						PremoveBBNormalExec,
+						getMoveValue(myPAWN, fromSQ, getPawnMoveSQ<Us>(fromSQ))
+					);
+					if (getPawnDoubleMoveBoard<Us>(fromSQ)& emptyBB) {
+						NEW_MOVE(
+							MovePtr,
+							fromSQ,
+							getPawnDoubleMoveSQ<Us>(fromSQ),
+							myPAWN,
+							Empty,
+							Empty,
+							PremoveBBPawnDoubleMove,
+							getMoveValue(myPAWN, fromSQ, getPawnDoubleMoveSQ<Us>(fromSQ))
+						);
+					}
+				}
+				else if (tempAttackBB & Rank8BB) {// promote
+				}
+				else {// normal move
+					NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						getPawnMoveSQ<Us>(fromSQ),
+						myPAWN,
+						Empty,
+						Empty,
+						PremoveBBNormalExec,
+						getMoveValue(myPAWN, fromSQ, getPawnMoveSQ<Us>(fromSQ))
+					);
+				}
+			}
+			tempAttackBB = getPawnAttackBoard<Us>(fromSQ) & enemys;
+			if (tempAttackBB & Rank8BB) {// promote capture
+				while (tempAttackBB)
+				{
+					toSQ = PopBit(&tempAttackBB);
+					short captureType = getEnPieceType(PiecesBB, toSQ);
+					NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						toSQ,
+						myPAWN,
+						captureType,
+						myKNIGHT,
+						PremoveBBPromoteCapture,
+						getMoveValue(myPAWN, fromSQ, toSQ)
+					);
+
+					NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						toSQ,
+						myPAWN,
+						captureType,
+						myBISHOP,
+						PremoveBBPromoteCapture,
+						getMoveValue(myPAWN, fromSQ, toSQ)
+					);
+
+					NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						toSQ,
+						myPAWN,
+						captureType,
+						myROOK,
+						PremoveBBPromoteCapture,
+						getMoveValue(myPAWN, fromSQ, toSQ)
+					);
+
+					NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						toSQ,
+						myPAWN,
+						captureType,
+						myQUEEN,
+						PremoveBBPromoteCapture,
+						getMoveValue(myPAWN, fromSQ, toSQ)
+					);
+				}
+			}
+			else {// capture
+				while (tempAttackBB)
+				{
+					toSQ = PopBit(&tempAttackBB);
+					NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						toSQ,
+						myPAWN,
+						getEnPieceType(PiecesBB, toSQ),
+						Empty,
+						PremoveBBPromoteCapture,
+						getMoveValue(myPAWN, fromSQ, toSQ)
+					);
+				}
+			}
+		}
+
+		// knight moves - only if not pinned
+		MoveBB = PiecesBB[myKNIGHT] & ~PinnedPiecesBB;
+		while (MoveBB) {
+			fromSQ = PopBit(&MoveBB);
+			tempAttackBB = AttackBrdKnightBB[fromSQ];
+
+			PieceAttacksBB = tempAttackBB & emptyBB;
+			while (PieceAttacksBB) {
+				toSQ = PopBit(&PieceAttacksBB);
+				NEW_MOVE(
+					MovePtr,
+					fromSQ,
+					toSQ,
+					myKNIGHT,
+					Empty,
+					Empty,
+					PremoveBBNormalExec,
+					getMoveValue(myKNIGHT, fromSQ, toSQ)
+				);
+			}
+			PieceAttacksBB = tempAttackBB & enemys;
+			while (PieceAttacksBB) {
+				toSQ = PopBit(&PieceAttacksBB);
+				NEW_MOVE(
+					MovePtr,
+					fromSQ,
+					toSQ,
+					myKNIGHT,
+					getEnPieceType(PiecesBB, toSQ),
+					Empty,
+					PremoveBBCapture,
+					getMoveValue(myKNIGHT, fromSQ, toSQ)
+				);
+			}
+		}
+		// bishop moves
+		MoveBB = PiecesBB[myBISHOP];
+		while (MoveBB) {
+			fromSQ = PopBit(&MoveBB);
+			if (PinnedPiecesBB & SetMask[fromSQ]) {
+				tempAttackBB = PinBySquare[fromSQ]->blockingBB & magicGetBishopAttackBB(fromSQ, allPiecesBB);
+			}
+			else {
+				tempAttackBB = magicGetBishopAttackBB(fromSQ, allPiecesBB);
+			}
+			PieceAttacksBB = tempAttackBB & emptyBB;
+			while (PieceAttacksBB) {
+				toSQ = PopBit(&PieceAttacksBB);
+				NEW_MOVE(
+					MovePtr,
+					fromSQ,
+					toSQ,
+					myBISHOP,
+					Empty,
+					Empty,
+					PremoveBBNormalExec,
+					getMoveValue(myBISHOP, fromSQ, toSQ)
+				);
+			}
+			PieceAttacksBB = tempAttackBB & enemys;
+			while (PieceAttacksBB) {
+				toSQ = PopBit(&PieceAttacksBB);
+				NEW_MOVE(
+					MovePtr,
+					fromSQ,
+					toSQ,
+					myBISHOP,
+					getEnPieceType(PiecesBB, toSQ),
+					Empty,
+					PremoveBBCapture,
+					getMoveValue(myBISHOP, fromSQ, toSQ)
+				);
+			}
+		}
+		// rook moves
+		MoveBB = PiecesBB[myROOK];
+		while (MoveBB) {
+			fromSQ = PopBit(&MoveBB);
+			if (PinnedPiecesBB & SetMask[fromSQ]) {
+				tempAttackBB = PinBySquare[fromSQ]->blockingBB & magicGetRookAttackBB(fromSQ, allPiecesBB);
+			}
+			else {
+				tempAttackBB = magicGetRookAttackBB(fromSQ, allPiecesBB);
+			}
+			PieceAttacksBB = tempAttackBB & emptyBB;
+			while (PieceAttacksBB) {
+				toSQ = PopBit(&PieceAttacksBB);
+				NEW_MOVE(
+					MovePtr,
+					fromSQ,
+					toSQ,
+					myROOK,
+					Empty,
+					Empty,
+					PremoveBBNormalExec,
+					getMoveValue(myROOK, fromSQ, toSQ)
+				);
+			}
+			PieceAttacksBB = tempAttackBB & enemys;
+			while (PieceAttacksBB) {
+				toSQ = PopBit(&PieceAttacksBB);
+				NEW_MOVE(
+					MovePtr,
+					fromSQ,
+					toSQ,
+					myROOK,
+					getEnPieceType(PiecesBB, toSQ),
+					Empty,
+					PremoveBBCapture,
+					getMoveValue(myROOK, fromSQ, toSQ)
+				);
+			}
+		}
+		// queen moves
+		MoveBB = PiecesBB[myQUEEN];
+		while (MoveBB) {
+			fromSQ = PopBit(&MoveBB);
+			if (PinnedPiecesBB & SetMask[fromSQ]) {
+				tempAttackBB = PinBySquare[fromSQ]->blockingBB & magicGetQueenAttackBB(fromSQ, allPiecesBB);
+			}
+			else {
+				tempAttackBB = magicGetQueenAttackBB(fromSQ, allPiecesBB);
+			}
+			PieceAttacksBB = tempAttackBB & emptyBB;
+			while (PieceAttacksBB) {
+				toSQ = PopBit(&PieceAttacksBB);
+				NEW_MOVE(
+					MovePtr,
+					fromSQ,
+					toSQ,
+					myQUEEN,
+					Empty,
+					Empty,
+					PremoveBBNormalExec,
+					getMoveValue(myQUEEN, fromSQ, toSQ)
+				);
+			}
+			PieceAttacksBB = tempAttackBB & enemys;
+			while (PieceAttacksBB) {
+				toSQ = PopBit(&PieceAttacksBB);
+				NEW_MOVE(
+					MovePtr,
+					fromSQ,
+					toSQ,
+					myQUEEN,
+					getEnPieceType(PiecesBB, toSQ),
+					Empty,
+					PremoveBBCapture,
+					getMoveValue(myQUEEN, fromSQ, toSQ)
+				);
+			}
+		}
+
+		return MovePtr;
+		// ---------------------------------------
+		//		king in check area
+		// ---------------------------------------
+	KingInCheck:
+		if (InCheckNum == 1) {
+			// double check foces king move
+			// thereforce this must not be checked when king is attacked by more then one piece
+
+			// block moves can be checked by InCheckBlockingSQ_BB			
+			while (InCheckBlockingSQ_BB)
+				getMoveToGivenSQ<Us, false>(PopBit(&InCheckBlockingSQ_BB), MovePtr, Empty);
+
+			// capture moves can be checked by InCheckAttackSQ_BB
+			getMoveToGivenSQ<Us, true>(PopBit(&InCheckAttackSQ_BB), MovePtr, InCheckType);
+		}
+
+		return MovePtr;
+	}
+
+	template <Colors Us>
+	inline void DoMove(U64* Move) {}
+
+	template <Colors Us>
+	inline void UndoMove() {}
+
 private:
 
 	S_MemoryFrame MemoryFrame;
@@ -303,11 +761,6 @@ private:
 		MoveBit(&PiecesBB[Type], fromSQ, toSQ); 
 	}
 
-	template <Colors Us>
-	inline void DoMove(U64* Move) {}
-
-	template <Colors Us>
-	inline void UndoMove() {}
 
 	U64 PremoveBBNormalExec = 0ULL;
 	U64 PremoveBBPawnDoubleMove = 0ULL;
@@ -1224,456 +1677,6 @@ private:
 		return MovePtr;
 	}
 
-
-	template <Colors Us>
-	inline S_MOVE* GenMove(S_MOVE * MovePtr) {
-		constexpr short myPAWN = Us == WHITE ? WhitePawn : BlackPawn;
-		constexpr short myKNIGHT = Us == WHITE ? WhiteKnight : BlackKnight;
-		constexpr short myBISHOP = Us == WHITE ? WhiteBishop : BlackBishop;
-		constexpr short myROOK = Us == WHITE ? WhiteRook : BlackRook;
-		constexpr short myQUEEN = Us == WHITE ? WhiteQueen : BlackQueen;
-		constexpr short myKING = Us == WHITE ? WhiteKing : BlackKing;
-
-		constexpr short enPAWN = Us == BLACK ? WhitePawn : BlackPawn;
-		constexpr short enKNIGHT = Us == BLACK ? WhiteKnight : BlackKnight;
-		constexpr short enBISHOP = Us == BLACK ? WhiteBishop : BlackBishop;
-		constexpr short enROOK = Us == BLACK ? WhiteRook : BlackRook;
-		constexpr short enQUEEN = Us == BLACK ? WhiteQueen : BlackQueen;
-		constexpr short enKING = Us == BLACK ? WhiteKing : BlackKing;
-
-		constexpr U64 KingCastleFreeBB = Us == WHITE ? WhiteKingCastleFree : BlackKingCastleFree;
-		constexpr U64 QueenCastleFreeBB = Us == WHITE ? WhiteQueenCastleFree : BlackQueenCastleFree;
-		constexpr U64 KingCastleCheckBB = Us == WHITE ? WhiteKingCastleCheck : BlackKingCastleCheck;
-		constexpr U64 QueenCastleCheckBB = Us == WHITE ? WhiteQueenCastleCheck : BlackQueenCastleCheck;
-		constexpr U64 CastleRightsBB = Us == WHITE ? WKCA | WQCA : BKCA | BQCA;
-		constexpr U64 CastleKingSideBB = Us == WHITE ? WKCA : BKCA;
-		constexpr U64 CastleQueenSideBB = Us == WHITE ? WQCA : BQCA;
-		constexpr short CastleFrom = Us == WHITE ? E1 : E8;
-		constexpr short CastleKingSideTo = Us == WHITE ? G1 : G8;
-		constexpr short CastleQueenSideTo = Us == WHITE ? C1 : C8;
-
-		constexpr U64 Rank8BB = Us == WHITE ? the8Rank : the1Rank;
-		constexpr U64 Rank2BB = Us == WHITE ? the2Rank : the7Rank;
-
-		constexpr const short (*getMyPieceType)(const U64* , const short) = (Us == WHITE ? getWhitePieceType : getBlackPieceType);
-		constexpr const short (*getEnPieceType)(const U64* , const short) = (Us == WHITE ? getBlackPieceType : getWhitePieceType);
-
-		constexpr U64(*getMyPiecesBB)(const U64*) = (Us == WHITE ? getWhitePiecesBB : getBlackPiecesBB);
-		constexpr U64(*getEnPiecesBB)(const U64*) = (Us == WHITE ? getBlackPiecesBB : getWhitePiecesBB);
-
-
-		PremoveBBNormalExec = MOVE_NEW_PREMOVE_U64(NormalExec, CastlePerm, FiftyMove, EnPas);
-		PremoveBBPawnDoubleMove = MOVE_NEW_PREMOVE_U64(PawnDoubleMove, CastlePerm, FiftyMove, EnPas);
-		PremoveBBCapture = MOVE_NEW_PREMOVE_U64(Capture, CastlePerm, FiftyMove, EnPas);
-		PremoveBBPromote = MOVE_NEW_PREMOVE_U64(Promote, CastlePerm, FiftyMove, EnPas);
-		PremoveBBPromoteCapture = MOVE_NEW_PREMOVE_U64(PromoteCapture, CastlePerm, FiftyMove, EnPas);
-		PremoveBBCastle = MOVE_NEW_PREMOVE_U64(Castle, CastlePerm, FiftyMove, EnPas);
-
-		EnAttackBB = InCheckBlockingSQ_BB = InCheckAttackSQ_BB = PinnedPiecesBB = 0ULL;
-		InCheckNum = 0;
-		
-		Opening = IsOpening<Us>(PiecesBB);
-		if(Opening)
-			Endgame = false;
-		else
-			Endgame = IsEndgame(PiecesBB);
-
-		myKingBB = PiecesBB[myKING];
-		myKingSQ = PopBit(&myKingBB);
-		SetBit(&myKingBB, myKingSQ);
-
-		friends = getMyPiecesBB(PiecesBB);
-		enemys = getEnPiecesBB(PiecesBB);
-		allPiecesBB = friends | enemys;
-		emptyBB = ~allPiecesBB;
-
-		getEnemyAttack<enPAWN>(PiecesBB[enPAWN]);
-		getPinByAttackSQ<Us, true>(myKingSQ);
-		// get enPas
-		if (EnPas != NO_SQ) {
-			// get rid of EnPas-calc by check while doing move if any possible
-			U64 EnPasPieceBB = (Us == WHITE ? (AttackBrdbPawnBB[EnPas]) : (AttackBrdwPawnBB[EnPas])) & PiecesBB[myPAWN];
-			if (EnPasPieceBB) {
-				PremoveBBEnPassant = MOVE_NEW_PREMOVE_U64(EnPassant, CastlePerm, FiftyMove, EnPas);
-				while (EnPasPieceBB) {
-					//MOVE_NEW_MOVE(int mod, int f, int t, int mov, int ca, int pro, int cp, int fm, int ep)		
-
-					U64 tempMove = MOVE_NEW_U64(PopBit(&EnPasPieceBB), EnPas, myPAWN, Empty, Empty, PremoveBBEnPassant);
-					//make EnPas move and check valid or not
-					DoMove<Us>(&tempMove);
-					U64 _allPiecesBB = getWhitePiecesBB(PiecesBB) | getBlackPiecesBB(PiecesBB);
-					// now check attacks from king_sq - only sliding moves are possible checks
-					// save move if not in check			
-					if (((magicGetBishopAttackBB(myKingSQ, _allPiecesBB) & (PiecesBB[enQUEEN] | PiecesBB[enBISHOP])) | (magicGetRookAttackBB(myKingSQ, _allPiecesBB) & (PiecesBB[enQUEEN] | PiecesBB[enROOK]))) == 0ULL) {
-						MovePtr = NEW_MOVE(MovePtr, tempMove, PIECES_VALUES_ABS[enPAWN] + 1000);
-					}
-					UndoMove<Us>();
-				}
-			}
-		}
-		InCheck = InCheckAttackSQ_BB != 0ULL;
-
-		// get king moves
-		U64 tempAttackBB = AttackBrdKingBB[myKingSQ] & ~EnAttackBB;
-		//king moves
-		U64 PieceAttacksBB = tempAttackBB & emptyBB;
-		while (PieceAttacksBB) {
-			toSQ = PopBit(&PieceAttacksBB);
-			NEW_MOVE(
-				MovePtr, 
-				myKingSQ, 
-				toSQ, 
-				myKING, 
-				Empty, 
-				Empty, 
-				PremoveBBNormalExec, 
-				getMoveValue(myKING, myKingSQ, toSQ)
-			);
-		}		
-
-		PieceAttacksBB = tempAttackBB & enemys;
-		while (PieceAttacksBB) {
-			toSQ = PopBit(&PieceAttacksBB);
-			NEW_MOVE(
-				MovePtr, 
-				myKingSQ, 
-				toSQ, 
-				myKING, 
-				getEnPieceType(PiecesBB, toSQ), 
-				Empty, 
-				PremoveBBCapture, 
-				getMoveValue(myKING, myKingSQ, toSQ)
-			);
-		}
-		U64 MoveBB;
-
-		if (InCheck)
-			goto KingInCheck;
-// ---------------------------------------
-//		king NOT in check area
-// ---------------------------------------
-
-		// castle
-		if (CastleRightsBB & CastlePerm) {
-			if (CastleKingSideBB & CastlePerm)
-				if ((allPiecesBB & KingCastleFreeBB) == 0ULL)
-					if ((EnAttackBB & KingCastleCheckBB) == 0ULL)
-						NEW_MOVE(
-							MovePtr,
-							CastleFrom,
-							CastleKingSideTo,
-							myKING,
-							Empty,
-							Empty,
-							PremoveBBCastle,
-							getMoveValue(myKING, CastleFrom, CastleKingSideTo) + (Endgame ? -10 : 100)
-						);
-
-			if (CastleQueenSideBB & CastlePerm)
-				if ((allPiecesBB & QueenCastleFreeBB) == 0ULL)
-					if ((EnAttackBB & QueenCastleCheckBB) == 0ULL)
-						NEW_MOVE(
-							MovePtr,
-							CastleFrom,
-							CastleQueenSideTo,
-							myKING,
-							Empty,
-							Empty,
-							PremoveBBCastle,
-							getMoveValue(myKING, CastleFrom, CastleQueenSideTo) + (Endgame ? -10 : 100)
-						);
-		}
-
-		// pawn moves
-		MoveBB = PiecesBB[myPAWN];
-		while (MoveBB) {
-			fromSQ = PopBit(&MoveBB);
-
-			// -> normal move
-			tempAttackBB = getPawnMoveBoard<Us>(fromSQ) & emptyBB;
-			if (tempAttackBB) {
-				// rank 2? -> double move
-				if (SetMask[fromSQ] & Rank2BB) {
-					// + normal move
-					NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						getPawnMoveSQ<Us>(fromSQ),
-						myPAWN,
-						Empty,
-						Empty,
-						PremoveBBNormalExec,
-						getMoveValue(myPAWN, fromSQ, getPawnMoveSQ<Us>(fromSQ))
-					);
-					if (getPawnDoubleMoveBoard<Us>(fromSQ) & emptyBB) {
-						NEW_MOVE(
-							MovePtr,
-							fromSQ,
-							getPawnDoubleMoveSQ<Us>(fromSQ),
-							myPAWN,
-							Empty,
-							Empty,
-							PremoveBBPawnDoubleMove,
-							getMoveValue(myPAWN, fromSQ, getPawnDoubleMoveSQ<Us>(fromSQ))
-						);
-					}
-				}
-				else if (tempAttackBB & Rank8BB) {// promote
-				}
-				else {// normal move
-					NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						getPawnMoveSQ<Us>(fromSQ),
-						myPAWN,
-						Empty,
-						Empty,
-						PremoveBBNormalExec,
-						getMoveValue(myPAWN, fromSQ, getPawnMoveSQ<Us>(fromSQ))
-					);
-				}
-			}
-			tempAttackBB = getPawnAttackBoard<Us>(fromSQ) & enemys;
-			if (tempAttackBB & Rank8BB) {// promote capture
-				while (tempAttackBB)
-				{
-					toSQ = PopBit(&tempAttackBB);
-					short captureType = getEnPieceType(PiecesBB, toSQ);
-					NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						toSQ,
-						myPAWN,
-						captureType,
-						myKNIGHT,
-						PremoveBBPromoteCapture,
-						getMoveValue(myPAWN, fromSQ, toSQ)
-					);
-
-					NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						toSQ,
-						myPAWN,
-						captureType,
-						myBISHOP,
-						PremoveBBPromoteCapture,
-						getMoveValue(myPAWN, fromSQ, toSQ)
-					);
-
-					NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						toSQ,
-						myPAWN,
-						captureType,
-						myROOK,
-						PremoveBBPromoteCapture,
-						getMoveValue(myPAWN, fromSQ, toSQ)
-					);
-
-					NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						toSQ,
-						myPAWN,
-						captureType,
-						myQUEEN,
-						PremoveBBPromoteCapture,
-						getMoveValue(myPAWN, fromSQ, toSQ)
-					);
-				}
-			}
-			else {// capture
-				while (tempAttackBB)
-				{
-					toSQ = PopBit(&tempAttackBB);
-					NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						toSQ,
-						myPAWN,
-						getEnPieceType(PiecesBB, toSQ),
-						Empty,
-						PremoveBBPromoteCapture,
-						getMoveValue(myPAWN, fromSQ, toSQ)
-					);
-				}
-			}
-		}
-		
-		// knight moves - only if not pinned
-		MoveBB = PiecesBB[myKNIGHT] & ~PinnedPiecesBB;
-		while (MoveBB) {
-			fromSQ = PopBit(&MoveBB);
-			tempAttackBB = AttackBrdKnightBB[fromSQ];
-
-			PieceAttacksBB = tempAttackBB & emptyBB;
-			while (PieceAttacksBB) {
-				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
-					MovePtr,
-					fromSQ,
-					toSQ,
-					myKNIGHT,
-					Empty,
-					Empty,
-					PremoveBBNormalExec,
-					getMoveValue(myKNIGHT, fromSQ, toSQ)
-				);
-			}
-			PieceAttacksBB = tempAttackBB & enemys;
-			while (PieceAttacksBB) {
-				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
-					MovePtr,
-					fromSQ,
-					toSQ,
-					myKNIGHT,
-					getEnPieceType(PiecesBB, toSQ),
-					Empty,
-					PremoveBBCapture,
-					getMoveValue(myKNIGHT, fromSQ, toSQ)
-				);
-			}
-		}
-		// bishop moves
-		MoveBB = PiecesBB[myBISHOP];
-		while (MoveBB) {
-			fromSQ = PopBit(&MoveBB);
-			if (PinnedPiecesBB & SetMask[fromSQ]) {
-				tempAttackBB = PinBySquare[fromSQ]->blockingBB & magicGetBishopAttackBB(fromSQ, allPiecesBB);
-			}
-			else {
-				tempAttackBB = magicGetBishopAttackBB(fromSQ, allPiecesBB);
-			}
-			PieceAttacksBB = tempAttackBB & emptyBB;
-			while (PieceAttacksBB) {
-				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
-					MovePtr,
-					fromSQ,
-					toSQ,
-					myBISHOP,
-					Empty,
-					Empty,
-					PremoveBBNormalExec,
-					getMoveValue(myBISHOP, fromSQ, toSQ)
-				);
-			}
-			PieceAttacksBB = tempAttackBB & enemys;
-			while (PieceAttacksBB) {
-				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
-					MovePtr,
-					fromSQ,
-					toSQ,
-					myBISHOP,
-					getEnPieceType(PiecesBB, toSQ),
-					Empty,
-					PremoveBBCapture,
-					getMoveValue(myBISHOP, fromSQ, toSQ)
-				);
-			}
-		}
-		// rook moves
-		MoveBB = PiecesBB[myROOK];
-		while (MoveBB) {
-			fromSQ = PopBit(&MoveBB);
-			if (PinnedPiecesBB & SetMask[fromSQ]) {
-				tempAttackBB = PinBySquare[fromSQ]->blockingBB & magicGetRookAttackBB(fromSQ, allPiecesBB);
-			}
-			else {
-				tempAttackBB = magicGetRookAttackBB(fromSQ, allPiecesBB);
-			}
-			PieceAttacksBB = tempAttackBB & emptyBB;
-			while (PieceAttacksBB) {
-				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
-					MovePtr,
-					fromSQ,
-					toSQ,
-					myROOK,
-					Empty,
-					Empty,
-					PremoveBBNormalExec,
-					getMoveValue(myROOK, fromSQ, toSQ)
-				);
-			}
-			PieceAttacksBB = tempAttackBB & enemys;
-			while (PieceAttacksBB) {
-				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
-					MovePtr,
-					fromSQ,
-					toSQ,
-					myROOK,
-					getEnPieceType(PiecesBB, toSQ),
-					Empty,
-					PremoveBBCapture,
-					getMoveValue(myROOK, fromSQ, toSQ)
-				);
-			}
-		}
-		// queen moves
-		MoveBB = PiecesBB[myQUEEN];
-		while (MoveBB) {
-			fromSQ = PopBit(&MoveBB);
-			if (PinnedPiecesBB & SetMask[fromSQ]) {
-				tempAttackBB = PinBySquare[fromSQ]->blockingBB & magicGetQueenAttackBB(fromSQ, allPiecesBB);
-			}
-			else {
-				tempAttackBB = magicGetQueenAttackBB(fromSQ, allPiecesBB);
-			}
-			PieceAttacksBB = tempAttackBB & emptyBB;
-			while (PieceAttacksBB) {
-				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
-					MovePtr,
-					fromSQ,
-					toSQ,
-					myQUEEN,
-					Empty,
-					Empty,
-					PremoveBBNormalExec,
-					getMoveValue(myQUEEN, fromSQ, toSQ)
-				);
-			}
-			PieceAttacksBB = tempAttackBB & enemys;
-			while (PieceAttacksBB) {
-				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
-					MovePtr,
-					fromSQ,
-					toSQ,
-					myQUEEN,
-					getEnPieceType(PiecesBB, toSQ),
-					Empty,
-					PremoveBBCapture,
-					getMoveValue(myQUEEN, fromSQ, toSQ)
-				);
-			}
-		}
-
-		return MovePtr;
-// ---------------------------------------
-//		king in check area
-// ---------------------------------------
-	KingInCheck:
-		if (InCheckNum == 1) {
-			// double check foces king move
-			// thereforce this must not be checked when king is attacked by more then one piece
-
-			// block moves can be checked by InCheckBlockingSQ_BB			
-			while (InCheckBlockingSQ_BB)
-				getMoveToGivenSQ<Us, false>(PopBit(&InCheckBlockingSQ_BB), MovePtr, Empty);
-
-			// capture moves can be checked by InCheckAttackSQ_BB
-			getMoveToGivenSQ<Us, true>(PopBit(&InCheckAttackSQ_BB), MovePtr, InCheckType);
-		}
-
-		return MovePtr;
-	}
 
 
 	inline bool KingInCheck(void) { return InCheck;	}

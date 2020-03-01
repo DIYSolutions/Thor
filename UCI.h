@@ -1,6 +1,8 @@
 #pragma once
 #include "hash.h"
 #include "ChessThreadManager.h"
+#include "perfttest.h"
+
 #define INPUTBUFFER 400 * 6
 
 class UCI
@@ -33,6 +35,7 @@ public:
 
 		int MB = STD_HASHTABLE_MB;
 		int T = STD_THREAD;
+		int D = 0;
 		while (true) {
 			memset(&line[0], 0, sizeof(line));
 			fflush(stdout);
@@ -67,11 +70,10 @@ public:
 				std::cout << "uciok" << std::endl;
 				printing_console_end();
 			}
-			else if (!strncmp(line, "debug", 4)) {
-				for (int i = 0; i < Message->ThreadsRunningNum(); i++)
-					Message->putNewMessage(
-						pChessboard->GenThreadMessage(ThreadPerftTest, 0)
-					);
+			else if (!strncmp(line, "perfttest ", 10)) {
+				sscanf_s(line, "%*s %d", &D);
+				print_console("starting perft test(depth=%d)", D);
+				perfttest(pChessboard, D);
 			}
 			else if (!strncmp(line, "setoption name Threads value ", 29)) {
 				sscanf_s(line, "%*s %*s %*s %*s %d", &T);
@@ -124,7 +126,7 @@ private:
 		_pSearchInfo->nodes = 0;
 		_pSearchInfo->nullCut = 0;
 		Message->putNewMessage(
-			pChessboard->GenThreadMessage(SearchMode, SEARCH_MAX_MOVES)
+			pChessboard->GenThreadMessage(SearchMode, _pSearchInfo->depth)
 		);
 	}
 

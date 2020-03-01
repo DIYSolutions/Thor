@@ -62,5 +62,8 @@
     <ClInclude Include="ChessThreadMessenger.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="perfttest.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

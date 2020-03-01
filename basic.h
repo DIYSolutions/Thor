@@ -71,6 +71,7 @@ void InitOutputLock();
 void print_console(const char* line, BoardValue value1, int value2);
 void print_console_str(const char* line, char* str);
 void PrintBitboard(U64 bb);
+void print_search_info(const BoardValue Score, const short Depth, U64 nodes, U64 timems);
 
 #include <chrono>
 inline U64 GetMilliTime() {

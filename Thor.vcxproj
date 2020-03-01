@@ -163,6 +163,7 @@
     <ClInclude Include="MemoryBlock.h" />
     <ClInclude Include="memory_basic.h" />
     <ClInclude Include="move.h" />
+    <ClInclude Include="perfttest.h" />
     <ClInclude Include="UCI.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

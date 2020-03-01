@@ -133,10 +133,19 @@ public:
 		_ThreadsWaiting = 0;
 		_ThreadsRunning = 0;
 	}
+	inline bool MessageWaiting(void) {
+		bool ret;
+		while (lock.test_and_set(std::memory_order_acquire)) // acquire lock
+			; // spin
+		ret = _MessagesRoot.next != nullptr;
+		lock.clear(std::memory_order_release);
+		return ret;
+	}
+
 	inline S_ThreadMessage* getNewMessage(void) {
 		while (lock.test_and_set(std::memory_order_acquire)) // acquire lock
 			; // spin
-		if (!MessageWaiting()) {
+		if (_MessagesRoot.next == nullptr) {
 			lock.clear(std::memory_order_release);
 			return nullptr;
 		}
@@ -178,15 +187,14 @@ public:
 	inline short ThreadsWaitingNum(void) {
 		return _ThreadsWaiting;
 	}
+	inline short ThreadsWorkingNum(void) {
+		return _ThreadsRunning - _ThreadsWaiting;
+	}
 private:
 	std::atomic<short> _ThreadsRunning;
 	std::atomic<short> _ThreadsWaiting;
 	std::atomic_flag lock;
 	S_ThreadMessage _MessagesRoot;
-
-	inline bool MessageWaiting(void) {
-		return _MessagesRoot.next != nullptr;
-	}
 
 };
 

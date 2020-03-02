@@ -44,6 +44,14 @@ public:
 		MESSENGER->putNewMessage(newMessage);
 	}
 
+	inline short getWorkingThreads(void) {
+		short count = ThreadNum;
+		for (short i = 0; i < ThreadNum; i++) {
+			if (Threads[i].Idle())
+				count--;
+		}
+		return count;
+	}
 
 private:
 	ChessThread Threads[MAX_THREAD];

@@ -147,7 +147,7 @@ constexpr short mirrorBoard[64] = {
 	7, 6, 5, 4, 3, 2, 1, 0
 };
 
-constexpr int CastlePerm[64] = {
+constexpr short CastlePermArr[64] = {
 	13, 15, 15, 15, 12, 15, 15, 14,
 	15, 15, 15, 15, 15, 15, 15, 15,
 	15, 15, 15, 15, 15, 15, 15, 15,

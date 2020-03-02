@@ -71,39 +71,26 @@ public:
 
 		switch (Mode) {
 		case ThreadPerftTest:
-			nodes = 0ULL;
 			// get moves from this position
-			ThreadMemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
-
-			perft_moves = (S_MOVE*)pMemory->AllocFrameMemory(sizeof(S_MOVE) * BOARD_MAX_MOVES);
-			perft_count = pChessboard->genMove(perft_moves);
 			// for each move
-			if (MaxDepth == 1)
+			if (MaxDepth == 1) {
+				ThreadMemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
+				perft_moves = (S_MOVE*)pMemory->AllocFrameMemory(sizeof(S_MOVE) * BOARD_MAX_MOVES);
+				perft_count = pChessboard->genMove(perft_moves);
 				_pSearchInfo->nodes += perft_count;
+				pMemory->ReleaseMemoryFrame(&ThreadMemoryFrame);
+			}
 			else {
-				for (short i = 0; i < perft_count; i++) {
-					pChessboard->doMove(&perft_moves[i].Move);
-					msg = getThreadMessage();
-					if (!msg) {
-						if (pChessboard->SideToMove() == WHITE) {
-							nodes += PerftTest<WHITE>(MaxDepth);
-						}
-						else {
-							nodes += PerftTest<BLACK>(MaxDepth);
-						}
-					}
-					else {
-						pChessboard->GenThreadMessage(msg);
-						msg->Depth = MaxDepth - 1;
-						msg->Mode = ThreadPerftTest;
-						Message->putNewMessage(msg);
-					}
-					pChessboard->undoMove();
+				nodes = 0ULL;
+				if (pChessboard->SideToMove() == WHITE) {
+					nodes += PerftTest<WHITE>(MaxDepth);
+				}
+				else {
+					nodes += PerftTest<BLACK>(MaxDepth);
 				}
 				_pSearchInfo->nodes += nodes;
 			}
 
-			pMemory->ReleaseMemoryFrame(&ThreadMemoryFrame);
 			break;
 		case ThreadMainSearch:
 		case ThreadAloneSearch:
@@ -235,7 +222,7 @@ private:
 			S_MOVE* MovePtr = (S_MOVE *)pMemory->AllocFrameMemory(sizeof(MovePtr) * BOARD_MAX_MOVES);
 			short MoveCount = pChessboard->GenMove<Us>(MovePtr) - MovePtr;
 			for (short i = 0; i < MoveCount; i++) {
-				pChessboard->DoMove<Us>(&MovePtr[i].Move);
+				pChessboard->DoMove<Us>(MovePtr[i].Move);
 				nodes += PerftTest<Them>(Depth - 1);
 				pChessboard->UndoMove<Us>();
 			}
@@ -246,4 +233,19 @@ private:
 			return 1ULL;
 		}
 	}
+
+	inline bool CheckUp() {
+		if (_pSearchInfo->nodes % 1024) {
+			// .. check if time up, or interrupt from GUI
+			if (_pSearchInfo->timeset && GetMilliTime() > _pSearchInfo->stoptime) {
+				_pSearchInfo->stopped = true;
+				return false;
+			}
+			else if (_pSearchInfo->stopped) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 };

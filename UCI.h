@@ -73,7 +73,7 @@ public:
 			else if (!strncmp(line, "perfttest ", 10)) {
 				sscanf_s(line, "%*s %d", &D);
 				print_console("starting perft test(depth=%d)", D);
-				perfttest(pChessboard, D);
+				perfttest(pMemory, pChessboard, D);
 			}
 			else if (!strncmp(line, "setoption name Threads value ", 29)) {
 				sscanf_s(line, "%*s %*s %*s %*s %d", &T);

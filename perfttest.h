@@ -2,7 +2,7 @@
 
 #include "Chessboard.h"
 #include "ChessThreadMessenger.h"
-#include "ChessThread.h"
+#include "MemoryBlock.h"
 
 
 #include "perfttest.h"
@@ -14,8 +14,7 @@
 using namespace std;
 #include <cstdint>
 
-ChessThreadMessenger* Messenger = MESSENGER;
-std::chrono::milliseconds PerftSleepTime(1);
+std::chrono::milliseconds PerftSleepTime(10);
 
 U64 perfttest_thread(Chessboard* testboard, int depth) {
 	S_ThreadMessage* msg;
@@ -24,26 +23,45 @@ U64 perfttest_thread(Chessboard* testboard, int depth) {
 	msg->Depth = depth;
 	msg->Mode = ThreadPerftTest;
 	_pSearchInfo->nodes = 0;
-	Messenger->putNewMessage(msg);// start thread search
+	MESSENGER->putNewMessage(msg);// start thread search
+	ThreadSleep(StdSleepTime);
 
-	ThreadSleep(PerftSleepTime);
-NotReadyYet:
-	while ((Messenger->ThreadsWorkingNum() > 0))
+	while ((MESSENGER->ThreadsWorkingNum() > 0))
 		ThreadSleep(PerftSleepTime);
-
-	if (Messenger->MessageWaiting())
-		goto NotReadyYet;
 
 	return _pSearchInfo->nodes;
 }
 
-void perfttest(Chessboard* testboard, int depth) {
+
+
+template <Colors Us>
+inline U64 PerftTest(MemoryBlock* pMemory, Chessboard* pChessboard, const short Depth) {
+	constexpr Colors Them = Us == WHITE ? BLACK : WHITE;
+	if (Depth) {
+		S_MemoryFrame PerftMemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
+		U64 nodes = 0;
+		S_MOVE* MovePtr = (S_MOVE*)pMemory->AllocFrameMemory(sizeof(MovePtr) * BOARD_MAX_MOVES);
+		short MoveCount = pChessboard->GenMove<Us>(MovePtr) - MovePtr;
+		for (short i = 0; i < MoveCount; i++) {
+			pChessboard->DoMove<Us>(MovePtr[i].Move);
+			nodes += PerftTest<Them>(pMemory, pChessboard, Depth - 1);
+			pChessboard->UndoMove<Us>();
+		}
+		pMemory->ReleaseMemoryFrame(&PerftMemoryFrame);
+		return nodes;
+	}
+	else {
+		return 1ULL;
+	}
+}
+
+void perfttest(MemoryBlock* pMemory, Chessboard* testboard, int depth) {
 	string line;
 	char fen_line[255];
 	int fen_len = 0;
 	char depth_line[255];
 	char temp;
-	ifstream myfile("perftsuite.epd");
+	ifstream myfile("C:\\Users\\Toto\\source\\repos\\DIYSolutions\\Thor\\x64\\Release\\perftsuite.epd");
 	int state = 0;
 	int depth_state = 0;
 	U64 depth_num[6];
@@ -119,9 +137,15 @@ void perfttest(Chessboard* testboard, int depth) {
 			testboard->ParseFEN(fen_line);
 			failed = false;
 			for (short i = 1; i <= depth; i++) {
-				start = GetMilliTime();
-				temp_long = perfttest_thread(testboard, i);
-				end = GetMilliTime();
+				start = GetNanoTime();
+				
+				if(testboard->SideToMove() == WHITE)
+					temp_long = PerftTest<WHITE>(pMemory, testboard, i);
+				else
+					temp_long = PerftTest<BLACK>(pMemory, testboard, i);
+				
+				//temp_long = perfttest_thread(testboard, i);
+				end = GetNanoTime();
 
 				std::cout << "depth " << i << ", found " << temp_long << " nodes ";
 				std::cout << "(" << (end - start) / 1000000.0 << "ms) - ";

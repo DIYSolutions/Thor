@@ -46,8 +46,8 @@ public:
 
 	inline void doMove(U64* Move) {
 		if (Side == WHITE)
-			return DoMove<WHITE>(Move);
-		return DoMove<BLACK>(Move);
+			return DoMove<WHITE>(*Move);
+		return DoMove<BLACK>(*Move);
 	}
 	inline void undoMove() {
 		if (Side == WHITE)
@@ -355,7 +355,7 @@ public:
 
 					U64 tempMove = MOVE_NEW_U64(PopBit(&EnPasPieceBB), EnPas, myPAWN, Empty, Empty, PremoveBBEnPassant);
 					//make EnPas move and check valid or not
-					DoMove<Us>(&tempMove);
+					DoMove<Us>(tempMove);
 					U64 _allPiecesBB = getWhitePiecesBB(PiecesBB) | getBlackPiecesBB(PiecesBB);
 					// now check attacks from king_sq - only sliding moves are possible checks
 					// save move if not in check			
@@ -374,7 +374,7 @@ public:
 		U64 PieceAttacksBB = tempAttackBB & emptyBB;
 		while (PieceAttacksBB) {
 			toSQ = PopBit(&PieceAttacksBB);
-			NEW_MOVE(
+			MovePtr = NEW_MOVE(
 				MovePtr,
 				myKingSQ,
 				toSQ,
@@ -389,7 +389,7 @@ public:
 		PieceAttacksBB = tempAttackBB & enemys;
 		while (PieceAttacksBB) {
 			toSQ = PopBit(&PieceAttacksBB);
-			NEW_MOVE(
+			MovePtr = NEW_MOVE(
 				MovePtr,
 				myKingSQ,
 				toSQ,
@@ -413,7 +413,7 @@ public:
 			if (CastleKingSideBB & CastlePerm)
 				if ((allPiecesBB & KingCastleFreeBB) == 0ULL)
 					if ((EnAttackBB & KingCastleCheckBB) == 0ULL)
-						NEW_MOVE(
+						MovePtr = NEW_MOVE(
 							MovePtr,
 							CastleFrom,
 							CastleKingSideTo,
@@ -427,7 +427,7 @@ public:
 			if (CastleQueenSideBB & CastlePerm)
 				if ((allPiecesBB & QueenCastleFreeBB) == 0ULL)
 					if ((EnAttackBB & QueenCastleCheckBB) == 0ULL)
-						NEW_MOVE(
+						MovePtr = NEW_MOVE(
 							MovePtr,
 							CastleFrom,
 							CastleQueenSideTo,
@@ -450,7 +450,7 @@ public:
 				// rank 2? -> double move
 				if (SetMask[fromSQ] & Rank2BB) {
 					// + normal move
-					NEW_MOVE(
+					MovePtr = NEW_MOVE(
 						MovePtr,
 						fromSQ,
 						getPawnMoveSQ<Us>(fromSQ),
@@ -461,7 +461,7 @@ public:
 						getMoveValue(myPAWN, fromSQ, getPawnMoveSQ<Us>(fromSQ))
 					);
 					if (getPawnDoubleMoveBoard<Us>(fromSQ)& emptyBB) {
-						NEW_MOVE(
+						MovePtr = NEW_MOVE(
 							MovePtr,
 							fromSQ,
 							getPawnDoubleMoveSQ<Us>(fromSQ),
@@ -476,7 +476,7 @@ public:
 				else if (tempAttackBB & Rank8BB) {// promote
 				}
 				else {// normal move
-					NEW_MOVE(
+					MovePtr = NEW_MOVE(
 						MovePtr,
 						fromSQ,
 						getPawnMoveSQ<Us>(fromSQ),
@@ -494,7 +494,7 @@ public:
 				{
 					toSQ = PopBit(&tempAttackBB);
 					short captureType = getEnPieceType(PiecesBB, toSQ);
-					NEW_MOVE(
+					MovePtr = NEW_MOVE(
 						MovePtr,
 						fromSQ,
 						toSQ,
@@ -505,7 +505,7 @@ public:
 						getMoveValue(myPAWN, fromSQ, toSQ)
 					);
 
-					NEW_MOVE(
+					MovePtr = NEW_MOVE(
 						MovePtr,
 						fromSQ,
 						toSQ,
@@ -516,7 +516,7 @@ public:
 						getMoveValue(myPAWN, fromSQ, toSQ)
 					);
 
-					NEW_MOVE(
+					MovePtr = NEW_MOVE(
 						MovePtr,
 						fromSQ,
 						toSQ,
@@ -527,7 +527,7 @@ public:
 						getMoveValue(myPAWN, fromSQ, toSQ)
 					);
 
-					NEW_MOVE(
+					MovePtr = NEW_MOVE(
 						MovePtr,
 						fromSQ,
 						toSQ,
@@ -543,7 +543,7 @@ public:
 				while (tempAttackBB)
 				{
 					toSQ = PopBit(&tempAttackBB);
-					NEW_MOVE(
+					MovePtr = NEW_MOVE(
 						MovePtr,
 						fromSQ,
 						toSQ,
@@ -566,7 +566,7 @@ public:
 			PieceAttacksBB = tempAttackBB & emptyBB;
 			while (PieceAttacksBB) {
 				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
+				MovePtr = NEW_MOVE(
 					MovePtr,
 					fromSQ,
 					toSQ,
@@ -580,7 +580,7 @@ public:
 			PieceAttacksBB = tempAttackBB & enemys;
 			while (PieceAttacksBB) {
 				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
+				MovePtr = NEW_MOVE(
 					MovePtr,
 					fromSQ,
 					toSQ,
@@ -605,7 +605,7 @@ public:
 			PieceAttacksBB = tempAttackBB & emptyBB;
 			while (PieceAttacksBB) {
 				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
+				MovePtr = NEW_MOVE(
 					MovePtr,
 					fromSQ,
 					toSQ,
@@ -619,7 +619,7 @@ public:
 			PieceAttacksBB = tempAttackBB & enemys;
 			while (PieceAttacksBB) {
 				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
+				MovePtr = NEW_MOVE(
 					MovePtr,
 					fromSQ,
 					toSQ,
@@ -644,7 +644,7 @@ public:
 			PieceAttacksBB = tempAttackBB & emptyBB;
 			while (PieceAttacksBB) {
 				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
+				MovePtr = NEW_MOVE(
 					MovePtr,
 					fromSQ,
 					toSQ,
@@ -658,7 +658,7 @@ public:
 			PieceAttacksBB = tempAttackBB & enemys;
 			while (PieceAttacksBB) {
 				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
+				MovePtr = NEW_MOVE(
 					MovePtr,
 					fromSQ,
 					toSQ,
@@ -683,7 +683,7 @@ public:
 			PieceAttacksBB = tempAttackBB & emptyBB;
 			while (PieceAttacksBB) {
 				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
+				MovePtr = NEW_MOVE(
 					MovePtr,
 					fromSQ,
 					toSQ,
@@ -697,7 +697,7 @@ public:
 			PieceAttacksBB = tempAttackBB & enemys;
 			while (PieceAttacksBB) {
 				toSQ = PopBit(&PieceAttacksBB);
-				NEW_MOVE(
+				MovePtr = NEW_MOVE(
 					MovePtr,
 					fromSQ,
 					toSQ,
@@ -721,20 +721,222 @@ public:
 
 			// block moves can be checked by InCheckBlockingSQ_BB			
 			while (InCheckBlockingSQ_BB)
-				getMoveToGivenSQ<Us, false>(PopBit(&InCheckBlockingSQ_BB), MovePtr, Empty);
+				MovePtr = getMoveToGivenSQ<Us, false>(PopBit(&InCheckBlockingSQ_BB), MovePtr, Empty);
 
 			// capture moves can be checked by InCheckAttackSQ_BB
-			getMoveToGivenSQ<Us, true>(PopBit(&InCheckAttackSQ_BB), MovePtr, InCheckType);
+			MovePtr = getMoveToGivenSQ<Us, true>(PopBit(&InCheckAttackSQ_BB), MovePtr, InCheckType);
 		}
 
 		return MovePtr;
 	}
 
-	template <Colors Us>
-	inline void DoMove(U64* Move) {}
 
 	template <Colors Us>
-	inline void UndoMove() {}
+	inline void DoMove(const U64 move) {
+		constexpr Colors Them = Us == WHITE ? BLACK : WHITE;
+		constexpr Fields CastleKingSideSQ = Us == WHITE ? G1 : G8;
+		constexpr Fields CastleKingSideRStartSQ = Us == WHITE ? H1 : H8;
+		constexpr Fields CastleKingSideRStopSQ = Us == WHITE ? F1 : F8;
+		constexpr Fields CastleQueenSideSQ = Us == WHITE ? C1 : C8;
+		constexpr Fields CastleQueenSideRStartSQ = Us == WHITE ? A1 : A8;
+		constexpr Fields CastleQueenSideRStopSQ = Us == WHITE ? D1 : D8;
+		constexpr Pieces myKING = Us == WHITE ? WhiteKing : BlackKing;
+		constexpr Pieces myROOK = Us == WHITE ? WhiteRook : BlackRook;
+		constexpr Pieces myPAWN = Us == WHITE ? WhitePawn : BlackPawn;
+		constexpr Pieces enPAWN = Us == WHITE ? BlackPawn : WhitePawn;
+		constexpr short (*getEnPasSQ)(const short) = (Us == WHITE ? getEnPasSQWhite : getEnPasSQBlack);
+
+		int fromSQ = MOVE_FROMSQ(move), toSQ = MOVE_TOSQ(move);
+		Side = Them;
+		History[HisPly++] = move;
+		Ply++;
+
+		int moved = MOVE_MOVED(move), promoted, captured, enPas;
+		HASH_PCE(moved, fromSQ);
+		HASH_PCE(moved, toSQ);
+		HASH_SIDE();
+		if (EnPas != NO_SQ) {
+			HASH_EP();
+			EnPas = NO_SQ;
+		}
+
+		switch (MOVE_MODE(move))
+		{
+		case NormalExec:
+			MovePiece(moved, fromSQ, toSQ);
+			FiftyMove++;
+			HASH_CA();
+			CastlePerm = CastlePerm & CastlePermArr[fromSQ] & CastlePermArr[toSQ];
+			HASH_CA();
+			return;
+		case PawnDoubleMove:
+			MovePiece(myPAWN, fromSQ, toSQ);
+			FiftyMove = 0;
+			EnPas = getEnPasSQ(toSQ);
+			HASH_EP();
+			return;
+		case Castle:
+			MovePiece(myKING, fromSQ, toSQ);
+			if (CastleKingSideSQ == toSQ) {
+				HASH_PCE(myROOK, CastleKingSideRStartSQ);
+				HASH_PCE(myROOK, CastleKingSideRStopSQ);
+				MovePiece(myROOK, CastleKingSideRStartSQ, CastleKingSideRStopSQ);
+			}
+			else {
+				HASH_PCE(myROOK, CastleQueenSideRStartSQ);
+				HASH_PCE(myROOK, CastleQueenSideRStopSQ);
+				MovePiece(myROOK, CastleQueenSideRStartSQ, CastleQueenSideRStopSQ);
+			}
+			FiftyMove++;
+			HASH_CA();
+			CastlePerm = CastlePerm & CastlePermArr[fromSQ] & CastlePermArr[toSQ];
+			HASH_CA();
+			return;
+		case EnPassant:
+			enPas = getEnPasSQ(toSQ);
+			HASH_PCE(enPAWN, enPas);
+			MovePiece(myPAWN, fromSQ, toSQ);
+			DelPiece(enPAWN, enPas);
+			FiftyMove = 0;
+			return;
+		case Capture:
+			captured = MOVE_CAPTURED(move);
+			DelPiece(captured, toSQ);
+			HASH_PCE(captured, toSQ);
+			MovePiece(moved, fromSQ, toSQ);
+			FiftyMove = 0;
+			HASH_CA();
+			CastlePerm = CastlePerm & CastlePermArr[fromSQ] & CastlePermArr[toSQ];
+			HASH_CA();
+			return;
+		case Promote:
+			promoted = MOVE_PROMOTED(move);
+			MovePiece(myPAWN, fromSQ, toSQ);
+			ModPiece(myPAWN, promoted, toSQ);
+			HASH_PCE(myPAWN, toSQ);
+			HASH_PCE(promoted, toSQ);
+			FiftyMove = 0;
+			return;
+		case PromoteCapture:
+			promoted = MOVE_PROMOTED(move);
+			captured = MOVE_CAPTURED(move);
+			DelPiece(captured, toSQ);
+			MovePiece(myPAWN, fromSQ, toSQ);
+			ModPiece(myPAWN, promoted, toSQ);
+			HASH_PCE(myPAWN, toSQ);
+			HASH_PCE(captured, toSQ);
+			HASH_PCE(promoted, toSQ);
+			FiftyMove = 0;
+			HASH_CA();
+			CastlePerm = CastlePerm & CastlePermArr[fromSQ] & CastlePermArr[toSQ];
+			HASH_CA();
+			return;
+		default:
+			print_console("MODE: %d\n", MOVE_MODE(move));
+			print_console("MOVED: %d\n", MOVE_MOVED(move));
+			print_console("CAPTURED: %d\n", MOVE_CAPTURED(move));
+			print_console("PROMOTED: %d\n", MOVE_PROMOTED(move));
+			print_console("FROMSQ: %d\n", MOVE_FROMSQ(move));
+			print_console("TOSQ: %d\n", MOVE_TOSQ(move));
+			ASSERT(false);
+		}
+
+	}
+
+	template <Colors Us>
+	inline void UndoMove(void) {
+		constexpr Fields CastleKingSideSQ = Us == WHITE ? G1 : G8;
+		constexpr Fields CastleKingSideRStartSQ = Us == WHITE ? H1 : H8;
+		constexpr Fields CastleKingSideRStopSQ = Us == WHITE ? F1 : F8;
+		constexpr Fields CastleQueenSideSQ = Us == WHITE ? C1 : C8;
+		constexpr Fields CastleQueenSideRStartSQ = Us == WHITE ? A1 : A8;
+		constexpr Fields CastleQueenSideRStopSQ = Us == WHITE ? D1 : D8;
+		constexpr Pieces myKING = Us == WHITE ? WhiteKing : BlackKing;
+		constexpr Pieces myROOK = Us == WHITE ? WhiteRook : BlackRook;
+		constexpr Pieces myPAWN = Us == WHITE ? WhitePawn : BlackPawn;
+		constexpr Pieces enPAWN = Us == WHITE ? BlackPawn : WhitePawn;
+		constexpr short (*getEnPasSQ)(const short) = (Us == WHITE ? getEnPasSQWhite : getEnPasSQBlack);
+
+		U64 move = History[--HisPly];
+
+		int fromSQ = MOVE_FROMSQ(move), toSQ = MOVE_TOSQ(move);
+		FiftyMove = MOVE_FIFTY_MOVE(move);
+		if (EnPas != NO_SQ) HASH_EP();
+		EnPas = MOVE_ENPAS(move);
+		if (EnPas != NO_SQ) HASH_EP();
+		HASH_CA();
+		CastlePerm = MOVE_CASTLE_PERM(move);
+		HASH_CA();
+		Ply--;
+		Side = Us;
+		HASH_SIDE();
+
+		int moved = MOVE_MOVED(move), promoted, captured, enPas;
+
+		switch (MOVE_MODE(move))
+		{
+		case NormalExec:
+			MovePiece(moved, toSQ, fromSQ);
+			HASH_PCE(moved, fromSQ);
+			HASH_PCE(moved, toSQ);
+			return;
+		case PawnDoubleMove:
+			MovePiece(myPAWN, toSQ, fromSQ);
+			HASH_PCE(myPAWN, fromSQ);
+			HASH_PCE(myPAWN, toSQ);
+			return;
+		case Castle:
+			MovePiece(myKING, toSQ, fromSQ);
+			HASH_PCE(myKING, fromSQ);
+			HASH_PCE(myKING, toSQ);
+			if (CastleKingSideSQ == toSQ) {
+				HASH_PCE(myROOK, CastleKingSideRStartSQ);
+				HASH_PCE(myROOK, CastleKingSideRStopSQ);
+				MovePiece(myROOK, CastleKingSideRStopSQ, CastleKingSideRStartSQ);
+			}
+			else {
+				HASH_PCE(myROOK, CastleQueenSideRStartSQ);
+				HASH_PCE(myROOK, CastleQueenSideRStopSQ);
+				MovePiece(myROOK, CastleQueenSideRStopSQ, CastleQueenSideRStartSQ);
+			}
+			return;
+		case EnPassant:
+			HASH_PCE(myPAWN, fromSQ);
+			HASH_PCE(myPAWN, toSQ);
+			enPas = getEnPasSQ(toSQ);
+			HASH_PCE(enPAWN, enPas);
+			MovePiece(myPAWN, toSQ, fromSQ);
+			NewPiece(enPAWN, enPas);
+			return;
+		case Capture:
+			captured = MOVE_CAPTURED(move);
+			HASH_PCE(moved, fromSQ);
+			HASH_PCE(moved, toSQ);
+			HASH_PCE(captured, toSQ);
+			MovePiece(moved, toSQ, fromSQ);
+			NewPiece(captured, toSQ);
+			return;
+		case Promote:
+			HASH_PCE(myPAWN, fromSQ);
+			promoted = MOVE_PROMOTED(move);
+			HASH_PCE(promoted, toSQ);
+			ModPiece(promoted, myPAWN, toSQ);
+			MovePiece(myPAWN, toSQ, fromSQ);
+			return;
+		case PromoteCapture:
+			HASH_PCE(myPAWN, fromSQ);
+			promoted = MOVE_PROMOTED(move);
+			captured = MOVE_CAPTURED(move);
+			HASH_PCE(captured, toSQ);
+			HASH_PCE(promoted, toSQ);
+			ModPiece(promoted, myPAWN, toSQ);
+			MovePiece(myPAWN, toSQ, fromSQ);
+			NewPiece(captured, toSQ);
+			return;
+		default:
+			ASSERT(false);
+		}
+	}
 
 private:
 
@@ -759,6 +961,10 @@ private:
 	}
 	inline void MovePiece(const short Type, const short fromSQ, const short toSQ) { 
 		MoveBit(&PiecesBB[Type], fromSQ, toSQ); 
+	}
+	inline void ModPiece(const short OldType, const short NewType, const short SQ) {
+		ClearBit(&PiecesBB[OldType], SQ);
+		SetBit(&PiecesBB[NewType], SQ);
 	}
 
 

@@ -140,11 +140,11 @@ constexpr bool IsKnight(const short Type) {
 	return false;
 }
 
-constexpr inline short getEnPasSQWhite(short sq) {
+constexpr inline short getEnPasSQWhite(const short sq) {
 	return sq - 8;
 }
 
-constexpr inline short getEnPasSQBlack(short sq) {
+constexpr inline short getEnPasSQBlack(const short sq) {
 	return sq + 8;
 }
 

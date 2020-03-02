@@ -445,7 +445,12 @@ public:
 			fromSQ = PopBit(&MoveBB);
 
 			// -> normal move
-			tempAttackBB = getPawnMoveBoard<Us>(fromSQ) & emptyBB;
+			if (PinnedPiecesBB & SetMask[fromSQ]) {
+				tempAttackBB = PinBySquare[fromSQ]->blockingBB & getPawnMoveBoard<Us>(fromSQ) & emptyBB;
+			}
+			else {
+				tempAttackBB = getPawnMoveBoard<Us>(fromSQ) & emptyBB;
+			}
 			if (tempAttackBB) {
 				// rank 2? -> double move
 				if (SetMask[fromSQ] & Rank2BB) {
@@ -474,6 +479,51 @@ public:
 					}
 				}
 				else if (tempAttackBB & Rank8BB) {// promote
+					toSQ = PopBit(&tempAttackBB);
+					short captureType = getEnPieceType(PiecesBB, toSQ);
+					MovePtr = NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						toSQ,
+						myPAWN,
+						Empty,
+						myKNIGHT,
+						PremoveBBPromote,
+						getMoveValue(myPAWN, fromSQ, toSQ)
+					);
+
+					MovePtr = NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						toSQ,
+						myPAWN,
+						Empty,
+						myBISHOP,
+						PremoveBBPromote,
+						getMoveValue(myPAWN, fromSQ, toSQ)
+					);
+
+					MovePtr = NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						toSQ,
+						myPAWN,
+						Empty,
+						myROOK,
+						PremoveBBPromote,
+						getMoveValue(myPAWN, fromSQ, toSQ)
+					);
+
+					MovePtr = NEW_MOVE(
+						MovePtr,
+						fromSQ,
+						toSQ,
+						myPAWN,
+						Empty,
+						myQUEEN,
+						PremoveBBPromote,
+						getMoveValue(myPAWN, fromSQ, toSQ)
+					);
 				}
 				else {// normal move
 					MovePtr = NEW_MOVE(
@@ -488,7 +538,12 @@ public:
 					);
 				}
 			}
-			tempAttackBB = getPawnAttackBoard<Us>(fromSQ) & enemys;
+			if (PinnedPiecesBB & SetMask[fromSQ]) {
+				tempAttackBB = PinBySquare[fromSQ]->blockingBB & getPawnAttackBoard<Us>(fromSQ) & enemys;
+			}
+			else {
+				tempAttackBB = getPawnAttackBoard<Us>(fromSQ) & enemys;
+			}
 			if (tempAttackBB & Rank8BB) {// promote capture
 				while (tempAttackBB)
 				{
@@ -1238,7 +1293,7 @@ private:
 				temp->absolutePin = Absolute;
 				temp->attack_sq = attack_sq;
 				temp->pinner_sq = PopBit(&newAttackBB);
-				temp->blockingBB = getRay(pinDir, myKingSQ) & getRay(getOppositeDir(pinDir), attack_sq) & ClearMask[fromSQ];
+				temp->blockingBB = (getRay(pinDir, attack_sq) & getRay(getOppositeDir(pinDir), temp->pinner_sq) & ClearMask[fromSQ]) | SetMask[temp->pinner_sq];
 
 				temp->next = PinBySquare[fromSQ];
 				PinBySquare[fromSQ] = temp;
@@ -1261,7 +1316,7 @@ private:
 				temp->absolutePin = Absolute;
 				temp->attack_sq = attack_sq;
 				temp->pinner_sq = PopBit(&newAttackBB);
-				temp->blockingBB = getRay(pinDir, myKingSQ) & getRay(getOppositeDir(pinDir), attack_sq) & ClearMask[fromSQ];
+				temp->blockingBB = (getRay(pinDir, attack_sq) & getRay(getOppositeDir(pinDir), temp->pinner_sq) & ClearMask[fromSQ]) | SetMask[temp->pinner_sq];
 
 				temp->next = PinBySquare[fromSQ];
 				PinBySquare[fromSQ] = temp;

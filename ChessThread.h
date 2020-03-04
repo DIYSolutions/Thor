@@ -46,6 +46,7 @@ public:
 		short perft_count = 0;
 		S_MemoryFrame ThreadMemoryFrame;
 		U64 nodes = 0ULL;
+
 	ThreadLoopBegin:
 		ThreadIdle = true;
 		Score = 0;
@@ -58,6 +59,10 @@ public:
 				goto ThreadLoopEnd;
 			ThreadSleep(StdSleepTime);
 			msg = Message->getNewMessage();
+		}
+		if (msg->Depth < _pSearchInfo->depth) {// msg is old
+			releaseThreadMessage(msg);
+			goto ThreadLoopBegin;
 		}
 		Message->ThreadWorking();
 		ThreadIdle = false;
@@ -95,53 +100,89 @@ public:
 		case ThreadMainSearch:
 		case ThreadAloneSearch:
 			// do iterative deepening alphabeta search - MaxDepth == SEARCH_MAX_MOVES
+			ThreadMemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
+			perft_moves = (S_MOVE*)pMemory->AllocFrameMemory(sizeof(S_MOVE) * BOARD_MAX_MOVES);
+			perft_count = pChessboard->genMove(perft_moves);
 			while(Depth < MaxDepth) {
-
-				if (_pSearchInfo->stopped)
-					break;
-
-				Score = AlphaBeta(++Depth, Alpha, Beta);
+				Depth++;
+				Score = MIN_INFINTE;
+				for (short i = 0; i < perft_count; i++) {
+					pChessboard->doMove(&perft_moves[i].Move);
+					perft_moves[i].Score = AlphaBeta(Depth, Alpha, Beta);
+					if (perft_moves[i].Score > Score)
+						Score = perft_moves[i].Score;
+					pChessboard->undoMove();
+					if (_pSearchInfo->stopped)
+						break;
+				}
 
 				if (_pSearchInfo->stopped)
 					break;
 
 				// get pv line
-				pv_count = pChessboard->getPvLine(pv_moves, SEARCH_MAX_MOVES) - pv_moves;
+				pv_count = pChessboard->getPvLine(pv_moves, Depth) - pv_moves;
 				// print pv line 
-				// start Thread - Mode == ThreadPVSearch
-				// for each move in pv line
 				printing_console_start();
 				print_search_info(Score, Depth, _pSearchInfo->nodes, GetMilliTime() - _pSearchInfo->starttime);
-				print_console_str('pv');
+
+				print_console_str((char*)"pv");
 				for (short i = 0; i < pv_count; i++) {
 					print_console_str(' ');
 					print_console_str(PrMove(pv_moves[i]));
 					pChessboard->doMove(&pv_moves[i]);
+					if (Mode == ThreadMainSearch) {
+						// start Thread - Mode == ThreadPVSearch
+						// for each move in pv line
+						msg = getThreadMessage();
+						if (msg) {
+							// while MessageContainer available
+							pChessboard->GenThreadMessage(msg);
+							msg->Depth = Depth + 1;
+							if (msg->Depth > SEARCH_MAX_MOVES)
+								msg->Depth = SEARCH_MAX_MOVES;
+							msg->Alpha = Score - ((10 * rand() * rand()) % 150) + 50;
+							msg->Beta = Score + ((10 * rand() * rand()) % 150) + 50;
+							msg->Mode = ThreadPVSearch;
+							Message->putNewMessage(msg);
+						}
+					}
+
+				}
+				print_console_endl();
+				printing_console_end();
+				while (pChessboard->SearchPly() > 0)
+					pChessboard->undoMove();
+
+				QuickSort(perft_moves, 0, perft_count);
+
+				if (_pSearchInfo->stopped)
+					break;
+				else if (Mode == ThreadAloneSearch)
+					continue;
+
+				for (short i = 0; i < Message->ThreadsRunningNum(); i++) {
+					pChessboard->doMove(&perft_moves[i].Move);
 					msg = getThreadMessage();
 					if (msg) {
 						// while MessageContainer available
 						pChessboard->GenThreadMessage(msg);
-						msg->Depth = Depth - 1;
-						if (msg->Depth == 0)
-							msg->Depth = 1;
-						else if (msg->Depth > 10)
-							msg->Depth = 10;
+						msg->Depth = Depth + 2;
+						if (msg->Depth > SEARCH_MAX_MOVES)
+							msg->Depth = SEARCH_MAX_MOVES;
 						msg->Alpha = Score - 150;
 						msg->Beta = Score + 150;
 						msg->Mode = ThreadPVSearch;
 						Message->putNewMessage(msg);
 					}
-
-				}
-				while (pChessboard->SearchPly() > 0)
 					pChessboard->undoMove();
+				}
 
-				print_console_endl();
-				printing_console_end();
+				if (_pSearchInfo->stopped)
+					break;
 
-				_pSearchInfo->depth = Depth;					
-				
+				_pSearchInfo->depth = Depth;
 			}
+			pMemory->ReleaseMemoryFrame(&ThreadMemoryFrame);
 			//cleanup if Mode == ThreadMainSearch
 			if (Mode == ThreadMainSearch)
 				while (Message->getNewMessage());
@@ -155,10 +196,6 @@ public:
 				if (_pSearchInfo->stopped)
 					break;
 			}
-			break;
-		case ThreadMinMaxSearch:
-			// do minmax search - MaxDepth == 4
-			MinMax(MaxDepth);
 			break;
 		default:
 			break;

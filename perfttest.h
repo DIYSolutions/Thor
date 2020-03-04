@@ -2,6 +2,7 @@
 
 #include "Chessboard.h"
 #include "ChessThreadMessenger.h"
+#include "ChessThread.h"
 #include "MemoryBlock.h"
 
 
@@ -13,6 +14,8 @@
 #include <fstream>
 using namespace std;
 #include <cstdint>
+
+
 
 std::chrono::milliseconds PerftSleepTime(10);
 
@@ -55,16 +58,52 @@ inline U64 PerftTest(MemoryBlock* pMemory, Chessboard* pChessboard, const short 
 	}
 }
 
+
+template <Colors Us>
+inline U64 PerftTest_detail(MemoryBlock* pMemory, Chessboard* pChessboard, const short Depth) {
+	constexpr Colors Them = Us == WHITE ? BLACK : WHITE;
+	if (Depth) {
+		S_MemoryFrame PerftMemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
+		U64 nodes = 0;
+		U64 move_nodes = 0;
+		S_MOVE* MovePtr = (S_MOVE*)pMemory->AllocFrameMemory(sizeof(MovePtr) * BOARD_MAX_MOVES);
+		short MoveCount = pChessboard->GenMove<Us>(MovePtr) - MovePtr;
+		for (short i = 0; i < MoveCount; i++) {
+			pChessboard->DoMove<Us>(MovePtr[i].Move);
+			move_nodes = PerftTest<Them>(pMemory, pChessboard, Depth - 1);
+
+			/*
+				probe with perft.exe(by H.G. Muller)
+			*/
+			if (perft_check(Depth - 1, pChessboard->genFEN()) != move_nodes) {
+				print_console_endl();
+				print_console_str(pChessboard->genFEN());
+				print_console_endl();
+				return 0;
+			}
+			nodes += move_nodes;
+			pChessboard->UndoMove<Us>();
+		}
+		pMemory->ReleaseMemoryFrame(&PerftMemoryFrame);
+		return nodes;
+	}
+	else {
+		return 1ULL;
+	}
+}
+
+
+
 void perfttest(MemoryBlock* pMemory, Chessboard* testboard, int depth) {
 	string line;
 	char fen_line[255];
 	int fen_len = 0;
 	char depth_line[255];
 	char temp;
-	ifstream myfile("C:\\Users\\Toto\\source\\repos\\DIYSolutions\\Thor\\x64\\Release\\perftsuite.epd");
+	ifstream myfile("perftsuite.epd");
 	int state = 0;
 	int depth_state = 0;
-	U64 depth_num[6];
+	U64 depth_num[6] = {0,0,0,0,0,0};
 	int ii = 0;
 
 	int lines_sum = 0;
@@ -146,6 +185,8 @@ void perfttest(MemoryBlock* pMemory, Chessboard* testboard, int depth) {
 				
 				//temp_long = perfttest_thread(testboard, i);
 				end = GetNanoTime();
+				if (temp_long == 0)
+					return;
 
 				std::cout << "depth " << i << ", found " << temp_long << " nodes ";
 				std::cout << "(" << (end - start) / 1000000.0 << "ms) - ";
@@ -168,6 +209,7 @@ void perfttest(MemoryBlock* pMemory, Chessboard* testboard, int depth) {
 					std::cout << "ok";
 				}
 				else {
+
 					std::cout << "FAILED got:" << temp_long << ", expected:" << depth_num[i - 1];
 					std::cout << std::endl;
 					if (!failed) {
@@ -177,6 +219,12 @@ void perfttest(MemoryBlock* pMemory, Chessboard* testboard, int depth) {
 					}
 					//PrintBoard(testboard);
 					//return;
+
+					if (testboard->SideToMove() == WHITE)
+						PerftTest_detail<WHITE>(pMemory, testboard, i);
+					else
+						PerftTest_detail<BLACK>(pMemory, testboard, i);
+
 					break;
 				}
 				std::cout << std::endl;

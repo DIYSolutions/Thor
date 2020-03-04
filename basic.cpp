@@ -86,7 +86,7 @@ void printing_console_end() {
 }
 
 void print_search_info(const BoardValue Score, const short Depth, U64 nodes, U64 timems){
-	std::cout << "info score cp " << Score << " depth " << Depth << " nodes " << nodes << " time " << timems;
+	std::cout << "info score cp " << Score << " depth " << Depth << " nodes " << nodes << " time " << timems << std::endl;
 }
 
 void PrintBitboard(U64 bb) {
@@ -112,4 +112,71 @@ void PrintBitboard(U64 bb) {
 		printf("\n");
 	}
 	printf("\n\n");
+}
+
+
+FILE* popen(const char* command, const char* flags) { return _popen(command, flags); }
+int pclose(FILE* fd) { return _pclose(fd); }
+
+U64 test_perft_line(const short depth, char* line) {
+	U64 ret = 0ULL;
+	char number_str[30];
+	short x = 0, y = 0;
+	if (!strncmp(line, "perft( ", 6)) {
+		number_str[0] = line[7];
+		number_str[1] = 0;
+		if (atoi(number_str) == depth) {
+			x = 9;
+			y = 0;
+			while (line[++x] == ' ');
+			while (line[x] != ' ') {
+				number_str[y++] = line[x++];
+			}
+			number_str[y] = 0;
+			return atoll(number_str);
+		}
+	}
+	return 0ULL;
+}
+
+U64 perft_check(const short depth, char* fen)
+{
+	char psBuffer[128];
+	char read_line[128];
+	short rx=0;
+	FILE* iopipe;
+	char cmd_line[256] = "perft ";
+	short x = 0, y = 0;
+	while (cmd_line[x] != 0)
+		x++;
+	cmd_line[x++] = '0' + depth;
+	cmd_line[x++] = ' ';
+	cmd_line[x++] = '"';
+	while (fen[y] != 0)
+		cmd_line[x++] = fen[y++];
+	cmd_line[x++] = '"';
+	cmd_line[x++] = 0;
+	if ((iopipe = popen(cmd_line, "r")) == NULL)
+		exit(1);
+	U64 ret = 0ULL;
+	while (!feof(iopipe))
+	{
+		if (fgets(psBuffer, 128, iopipe) != NULL) {
+			x = 0;
+			while (psBuffer[x] != 0) {
+				if (psBuffer[x] == '\n') {
+					read_line[rx] = 0;
+					ret = test_perft_line(depth, read_line);
+					if (ret)
+						return ret;
+					rx = 0;
+					x++;
+				}
+				if (psBuffer[x] != 0)
+					read_line[rx++] = psBuffer[x++];
+			}
+		}
+	}
+	std::cout << "error!" << std::endl;
+	return 0;
 }

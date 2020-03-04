@@ -212,6 +212,153 @@ public:
 		return true;
 	}
 
+	inline char* genFEN(void) {
+
+		char* fen = fen_line;
+		char* fen_start = fen_line;
+		int  rank = RANK_8;
+		int  file = FILE_A;
+
+		int numberEmpty = 0;
+		int oldRank = RANK_8;
+		for (int r = 7; r >= 0; r--) {
+			for (int f = 0; f < 8; f++) {
+				int sq = FR2SQ(f, r);
+				if (r != oldRank) {
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 47;
+					oldRank = r;
+				}
+				switch (getPieceType(sq)) {
+				case BlackPawn:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'p';
+					break;
+				case BlackKnight:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'n';
+					break;
+				case BlackBishop:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'b';
+					break;
+				case BlackRook:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'r';
+					break;
+				case BlackQueen:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'q';
+					break;
+				case BlackKing:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'k';
+					break;
+				case WhitePawn:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'P';
+					break;
+				case WhiteKnight:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'N';
+					break;
+				case WhiteBishop:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'B';
+					break;
+				case WhiteRook:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'R';
+					break;
+				case WhiteQueen:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'Q';
+					break;
+				case WhiteKing:
+					if (numberEmpty) {
+						*(fen++) = ('0' + numberEmpty);
+						numberEmpty = 0;
+					}
+					*(fen++) = 'K';
+					break;
+				case Empty:
+					numberEmpty++;
+					break;
+				}
+			}
+		}
+		if (numberEmpty) {
+			*(fen++) = ('0' + numberEmpty);
+			numberEmpty = 0;
+		}
+		*(fen++) = 32;
+
+		*(fen++) = Side == BLACK ? 98 : 119;
+
+		*(fen++) = 32;
+
+		char* test = fen;
+		if (CastlePerm & WKCA) *(fen++) = 75;
+		if (CastlePerm & WQCA) *(fen++) = 81;
+		if (CastlePerm & BKCA) *(fen++) = 107;
+		if (CastlePerm & BQCA) *(fen++) = 113;
+		if (test == fen) *(fen++) = '-';
+
+		*(fen++) = 32;
+		if (EnPas != NO_SQ) {
+			file = EnPas % 8;
+			rank = EnPas / 8;
+
+			*(fen++) = 'a' + file;
+			*(fen++) = '1' + rank;
+		}
+		else
+			*(fen++) = '-';
+
+		*(fen++) = ' ';
+		*(fen++) = '0';
+		*(fen++) = ' ';
+		*(fen++) = '1';
+		*(fen++) = 0;
+		return fen_line;
+	}
+
 	inline void setPly(short _Ply) { Ply = _Ply; }
 
 	inline short getPieceType(const short SQ) {
@@ -887,12 +1034,14 @@ public:
 			HASH_CA();
 			return;
 		default:
+#ifdef DEBUG
 			print_console("MODE: %d\n", MOVE_MODE(move));
 			print_console("MOVED: %d\n", MOVE_MOVED(move));
 			print_console("CAPTURED: %d\n", MOVE_CAPTURED(move));
 			print_console("PROMOTED: %d\n", MOVE_PROMOTED(move));
 			print_console("FROMSQ: %d\n", MOVE_FROMSQ(move));
 			print_console("TOSQ: %d\n", MOVE_TOSQ(move));
+#endif
 			ASSERT(false);
 		}
 
@@ -994,6 +1143,7 @@ public:
 	}
 
 private:
+	char fen_line[256] = "                                                                                                                                                                                                                                                               ";
 
 	S_MemoryFrame MemoryFrame;
 	MemoryBlock* pMemory;
@@ -1665,21 +1815,8 @@ private:
 				if (getPawnMoveBoard_reverse<Us>(toSQ)& emptyBB)
 					if (tempBB) {
 						fromSQ = PopBit(&tempBB);
-						if (getPawnMoveBoard<Us>(fromSQ)& emptyBB) {
-							if (PinnedPiecesBB & SetMask[fromSQ]) {
-								if (PinBySquare[fromSQ]->blockingBB & SetMask[toSQ])
-									MovePtr = NEW_MOVE(
-										MovePtr,
-										fromSQ,
-										toSQ,
-										myPAWN,
-										Empty,
-										Empty,
-										PremoveBBPawnDoubleMove,
-										getMoveValue(myPAWN, fromSQ, toSQ)
-									);
-							}
-							else {
+						if (PinnedPiecesBB & SetMask[fromSQ]) {
+							if (PinBySquare[fromSQ]->blockingBB & SetMask[toSQ])
 								MovePtr = NEW_MOVE(
 									MovePtr,
 									fromSQ,
@@ -1690,7 +1827,18 @@ private:
 									PremoveBBPawnDoubleMove,
 									getMoveValue(myPAWN, fromSQ, toSQ)
 								);
-							}
+						}
+						else {
+							MovePtr = NEW_MOVE(
+								MovePtr,
+								fromSQ,
+								toSQ,
+								myPAWN,
+								Empty,
+								Empty,
+								PremoveBBPawnDoubleMove,
+								getMoveValue(myPAWN, fromSQ, toSQ)
+							);
 						}
 					}
 

@@ -68,27 +68,28 @@ inline U64 PerftTest_detail(MemoryBlock* pMemory, Chessboard* pChessboard, const
 		U64 move_nodes = 0;
 		S_MOVE* MovePtr = (S_MOVE*)pMemory->AllocFrameMemory(sizeof(MovePtr) * BOARD_MAX_MOVES);
 		short MoveCount = pChessboard->GenMove<Us>(MovePtr) - MovePtr;
+		/*
+			probe with perft.exe(by H.G. Muller)
+		*/
+		if (perft_check(1, pChessboard->genFEN()) != MoveCount) {
+			print_console_endl();
+			print_console_str(pChessboard->genFEN());
+			print_console_endl();
+			return 1;
+		}
 		for (short i = 0; i < MoveCount; i++) {
 			pChessboard->DoMove<Us>(MovePtr[i].Move);
 			move_nodes = PerftTest<Them>(pMemory, pChessboard, Depth - 1);
 
-			/*
-				probe with perft.exe(by H.G. Muller)
-			*/
-			if (perft_check(Depth - 1, pChessboard->genFEN()) != move_nodes) {
-				print_console_endl();
-				print_console_str(pChessboard->genFEN());
-				print_console_endl();
-				return 0;
-			}
+			
 			nodes += move_nodes;
 			pChessboard->UndoMove<Us>();
 		}
 		pMemory->ReleaseMemoryFrame(&PerftMemoryFrame);
-		return nodes;
+		return 0;
 	}
 	else {
-		return 1ULL;
+		return 0;
 	}
 }
 
@@ -119,6 +120,7 @@ void perfttest(MemoryBlock* pMemory, Chessboard* testboard, int depth) {
 	long double min_value = 0.0;
 	bool first = true;
 	long double max_value = 0.0;
+	short movegen_fails = 0;
 	if (depth > 6) {
 		std::cout << "depth " << depth << " is to high, changed to 6" << std::endl;
 		depth = 6;
@@ -219,11 +221,11 @@ void perfttest(MemoryBlock* pMemory, Chessboard* testboard, int depth) {
 					}
 					//PrintBoard(testboard);
 					//return;
-
+					testboard->ParseFEN(fen_line);
 					if (testboard->SideToMove() == WHITE)
-						PerftTest_detail<WHITE>(pMemory, testboard, i);
+						movegen_fails += PerftTest_detail<WHITE>(pMemory, testboard, i);
 					else
-						PerftTest_detail<BLACK>(pMemory, testboard, i);
+						movegen_fails += PerftTest_detail<BLACK>(pMemory, testboard, i);
 
 					break;
 				}
@@ -239,6 +241,7 @@ void perfttest(MemoryBlock* pMemory, Chessboard* testboard, int depth) {
 			for (int i = 0; i < lines_err; i++) {
 				std::cout << "LINE:" << lines_err_num[i] << " - depth: " << lines_err_depth[i] << '\n';
 			}
+			std::cout << "movegen_fails: " << movegen_fails << std::endl;
 		}
 		else {
 			std::cout << " => without errors <=" << std::endl;

@@ -140,14 +140,6 @@ constexpr bool IsKnight(const short Type) {
 	return false;
 }
 
-constexpr inline short getEnPasSQWhite(const short sq) {
-	return sq - 8;
-}
-
-constexpr inline short getEnPasSQBlack(const short sq) {
-	return sq + 8;
-}
-
 template <Colors Us>
 inline const U64 getPawnAttackBoard_reverse(const short sq) {}
 

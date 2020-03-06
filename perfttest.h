@@ -72,20 +72,20 @@ inline U64 PerftTest_detail(MemoryBlock* pMemory, Chessboard* pChessboard, const
 			probe with perft.exe(by H.G. Muller)
 		*/
 		if (perft_check(1, pChessboard->genFEN()) != MoveCount) {
-			print_console_endl();
-			print_console_str(pChessboard->genFEN());
-			print_console_endl();
-			return 1;
+			error_exit(pChessboard->genFEN());
 		}
 		for (short i = 0; i < MoveCount; i++) {
 			pChessboard->DoMove<Us>(MovePtr[i].Move);
-			move_nodes = PerftTest<Them>(pMemory, pChessboard, Depth - 1);
-
-			
+			move_nodes = PerftTest<Them>(pMemory, pChessboard, Depth - 1);			
+			if (perft_check(Depth - 1, pChessboard->genFEN()) != move_nodes) {
+				print_console("! ------------------- !");
+				error_exit(pChessboard->genFEN());
+			}
 			nodes += move_nodes;
 			pChessboard->UndoMove<Us>();
 		}
 		pMemory->ReleaseMemoryFrame(&PerftMemoryFrame);
+		error_exit("no error found");
 		return 0;
 	}
 	else {
@@ -174,10 +174,12 @@ void perfttest(MemoryBlock* pMemory, Chessboard* testboard, int depth) {
 			depth_state = 0;
 
 
+
 			std::cout << "test this FEN to depth " << depth << std::endl;
 			testboard->ParseFEN(fen_line);
 			failed = false;
 			for (short i = 1; i <= depth; i++) {
+				
 				start = GetNanoTime();
 				
 				if(testboard->SideToMove() == WHITE)

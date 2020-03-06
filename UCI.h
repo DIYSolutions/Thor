@@ -16,7 +16,7 @@ public:
 
 		pTaskManager = new ChessThreadManager();
 		if (!_InitFrameMemorySystem<FrameInit>(MemorySize, 4))
-			error_exit("UCI: _InitFrameMemorySystem<FrameInit> failed!");;
+			error_exit("UCI: _InitFrameMemorySystem<FrameInit> failed!");
 
 		init();
 	}

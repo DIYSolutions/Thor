@@ -514,6 +514,9 @@ public:
 			}
 		}
 		InCheck = InCheckAttackSQ_BB != 0ULL;
+		
+		
+
 
 		// get king moves
 		U64 tempAttackBB = AttackBrdKingBB[myKingSQ] & ~EnAttackBB;
@@ -609,26 +612,30 @@ public:
 
 			// -> normal move
 			if (PinnedPiecesBB & SetMask[fromSQ]) {
-				tempAttackBB = PinBySquare[fromSQ]->blockingBB & getPawnMoveBoard<Us>(fromSQ) & emptyBB & MoveEnable;
+				tempAttackBB = PinBySquare[fromSQ]->blockingBB & getPawnMoveBoard<Us>(fromSQ) & emptyBB;
 			}
 			else {
-				tempAttackBB = getPawnMoveBoard<Us>(fromSQ) & emptyBB & MoveEnable;
+				tempAttackBB = getPawnMoveBoard<Us>(fromSQ) & emptyBB;
 			}
+			
 			if (tempAttackBB) {
 				// rank 2? -> double move
+				
 				if (SetMask[fromSQ] & Rank2BB) {
 					// + normal move
-					MovePtr = NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						getPawnMoveSQ<Us>(fromSQ),
-						myPAWN,
-						Empty,
-						Empty,
-						PremoveBBNormalExec,
-						getMoveValue(myPAWN, fromSQ, getPawnMoveSQ<Us>(fromSQ))
-					);
-					if (getPawnDoubleMoveBoard<Us>(fromSQ)& emptyBB) {
+					if (tempAttackBB & MoveEnable) {
+						MovePtr = NEW_MOVE(
+							MovePtr,
+							fromSQ,
+							getPawnMoveSQ<Us>(fromSQ),
+							myPAWN,
+							Empty,
+							Empty,
+							PremoveBBNormalExec,
+							getMoveValue(myPAWN, fromSQ, getPawnMoveSQ<Us>(fromSQ))
+						);
+					}
+					if (getPawnDoubleMoveBoard<Us>(fromSQ) & emptyBB & MoveEnable) {
 						MovePtr = NEW_MOVE(
 							MovePtr,
 							fromSQ,
@@ -642,63 +649,67 @@ public:
 					}
 				}
 				else if (tempAttackBB & Rank8BB) {// promote
-					toSQ = PopBit(&tempAttackBB);
-					short captureType = getEnPieceType(PiecesBB, toSQ);
-					MovePtr = NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						toSQ,
-						myPAWN,
-						Empty,
-						myKNIGHT,
-						PremoveBBPromote,
-						getMoveValue(myPAWN, fromSQ, toSQ)
-					);
+					if (tempAttackBB & MoveEnable) {
+						toSQ = PopBit(&tempAttackBB);
+						short captureType = getEnPieceType(PiecesBB, toSQ);
+						MovePtr = NEW_MOVE(
+							MovePtr,
+							fromSQ,
+							toSQ,
+							myPAWN,
+							Empty,
+							myKNIGHT,
+							PremoveBBPromote,
+							getMoveValue(myPAWN, fromSQ, toSQ)
+						);
 
-					MovePtr = NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						toSQ,
-						myPAWN,
-						Empty,
-						myBISHOP,
-						PremoveBBPromote,
-						getMoveValue(myPAWN, fromSQ, toSQ)
-					);
+						MovePtr = NEW_MOVE(
+							MovePtr,
+							fromSQ,
+							toSQ,
+							myPAWN,
+							Empty,
+							myBISHOP,
+							PremoveBBPromote,
+							getMoveValue(myPAWN, fromSQ, toSQ)
+						);
 
-					MovePtr = NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						toSQ,
-						myPAWN,
-						Empty,
-						myROOK,
-						PremoveBBPromote,
-						getMoveValue(myPAWN, fromSQ, toSQ)
-					);
+						MovePtr = NEW_MOVE(
+							MovePtr,
+							fromSQ,
+							toSQ,
+							myPAWN,
+							Empty,
+							myROOK,
+							PremoveBBPromote,
+							getMoveValue(myPAWN, fromSQ, toSQ)
+						);
 
-					MovePtr = NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						toSQ,
-						myPAWN,
-						Empty,
-						myQUEEN,
-						PremoveBBPromote,
-						getMoveValue(myPAWN, fromSQ, toSQ)
-					);
+						MovePtr = NEW_MOVE(
+							MovePtr,
+							fromSQ,
+							toSQ,
+							myPAWN,
+							Empty,
+							myQUEEN,
+							PremoveBBPromote,
+							getMoveValue(myPAWN, fromSQ, toSQ)
+						);
+					}
 				}
 				else {// normal move
-					MovePtr = NEW_MOVE(
-						MovePtr,
-						fromSQ,
-						getPawnMoveSQ<Us>(fromSQ),
-						myPAWN,
-						Empty,
-						Empty,
-						PremoveBBNormalExec,
-						getMoveValue(myPAWN, fromSQ, getPawnMoveSQ<Us>(fromSQ))
-					);
+					if (tempAttackBB & MoveEnable) {
+						MovePtr = NEW_MOVE(
+							MovePtr,
+							fromSQ,
+							getPawnMoveSQ<Us>(fromSQ),
+							myPAWN,
+							Empty,
+							Empty,
+							PremoveBBNormalExec,
+							getMoveValue(myPAWN, fromSQ, getPawnMoveSQ<Us>(fromSQ))
+						);
+					}
 				}
 			}
 			if (PinnedPiecesBB & SetMask[fromSQ]) {

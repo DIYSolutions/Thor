@@ -3,7 +3,6 @@
 #include "move.h"
 #include "hash.h"
 #include "MemoryBlock.h"
-#include "ChessThreadMessenger.h"
 
 class Chessboard
 {
@@ -11,23 +10,9 @@ class Chessboard
 public:
 	Chessboard(void) { }
 	~Chessboard(void) {
-		pMemory->ReleaseMemoryFrame(&MemoryFrame);
 	}
 
-	inline void init(MemoryBlock* _pMemory) {
-		pMemory = _pMemory;
-		MemoryFrame = pMemory->GetMemoryFrame(ThreadHeap);
-		PiecesBB = (U64*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(U64) * 12);
-		for (short i = 0; i < NO_SQ; i++)
-			PiecesBB[i] = 0ULL;
-		History = (U64*)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(U64) * GAME_MAX_MOVES);
-		for (short i = 0; i < GAME_MAX_MOVES; i++)
-			History[i] = 0ULL;
-		PinBySquare = (S_PinnedPiece**)pMemory->AllocFrameMemory<ThreadHeap>(sizeof(S_PinnedPiece*) * 64);
-		for (short i = 0; i < 64; i++) {
-			PinBySquare[i] = nullptr;
-		}
-	}
+	inline void init(MemoryBlock* _pMemory) { }
 
 	inline U64* getPvLine(U64* MovePtr, const short movesLeft) {
 		if (movesLeft) {
@@ -67,51 +52,7 @@ public:
 	}
 
 	inline const U64 getPosKey(void) { return PosKey; }
-
-	inline void GenThreadMessage(S_ThreadMessage * msg) {
-		msg->Side = Side;
-		msg->EnPas = EnPas;
-		msg->FiftyMove = FiftyMove;
-		msg->CastlePerm = CastlePerm;
-		msg->PosKey = PosKey;
-		msg->PiecesBB[0] = PiecesBB[0];
-		msg->PiecesBB[1] = PiecesBB[1];
-		msg->PiecesBB[2] = PiecesBB[2];
-		msg->PiecesBB[3] = PiecesBB[3];
-		msg->PiecesBB[4] = PiecesBB[4];
-		msg->PiecesBB[5] = PiecesBB[5];
-		msg->PiecesBB[6] = PiecesBB[6];
-		msg->PiecesBB[7] = PiecesBB[7];
-		msg->PiecesBB[8] = PiecesBB[8];
-		msg->PiecesBB[9] = PiecesBB[9];
-		msg->PiecesBB[10] = PiecesBB[10];
-		msg->PiecesBB[11] = PiecesBB[11];
-	}
-	inline S_ThreadMessage* GenThreadMessage(const short Mode, const short Depth) {
-		return NewThreadMessage(Side, EnPas, FiftyMove, CastlePerm, PiecesBB, PosKey, Mode, Depth);
-	}
-	inline void SetThreadMessage(S_ThreadMessage* msg) {
-		Side = msg->Side;
-		EnPas = msg->EnPas;
-		FiftyMove = msg->FiftyMove;
-		CastlePerm = msg->CastlePerm;
-		PosKey = msg->PosKey;
-		PiecesBB[0] = msg->PiecesBB[0];
-		PiecesBB[1] = msg->PiecesBB[1];
-		PiecesBB[2] = msg->PiecesBB[2];
-		PiecesBB[3] = msg->PiecesBB[3];
-		PiecesBB[4] = msg->PiecesBB[4];
-		PiecesBB[5] = msg->PiecesBB[5];
-		PiecesBB[6] = msg->PiecesBB[6];
-		PiecesBB[7] = msg->PiecesBB[7];
-		PiecesBB[8] = msg->PiecesBB[8];
-		PiecesBB[9] = msg->PiecesBB[9];
-		PiecesBB[10] = msg->PiecesBB[10];
-		PiecesBB[11] = msg->PiecesBB[11];
-		Ply = 0;
-		HisPly = 0;
-	}
-
+	
 	inline short SideToMove(void) { return Side; }
 	inline short HistoryPly(void) { return HisPly; }
 	inline short SearchPly(void) { return Ply; }
@@ -612,7 +553,7 @@ public:
 
 			// -> normal move
 			if (PinnedPiecesBB & SetMask[fromSQ]) {
-				tempAttackBB = PinBySquare[fromSQ]->blockingBB & getPawnMoveBoard<Us>(fromSQ) & emptyBB;
+				tempAttackBB = PinBySquare[fromSQ].blockingBB & getPawnMoveBoard<Us>(fromSQ) & emptyBB;
 			}
 			else {
 				tempAttackBB = getPawnMoveBoard<Us>(fromSQ) & emptyBB;
@@ -713,7 +654,7 @@ public:
 				}
 			}
 			if (PinnedPiecesBB & SetMask[fromSQ]) {
-				tempAttackBB = PinBySquare[fromSQ]->blockingBB & getPawnAttackBoard<Us>(fromSQ) & enemys & MoveEnable;
+				tempAttackBB = PinBySquare[fromSQ].blockingBB & getPawnAttackBoard<Us>(fromSQ) & enemys & MoveEnable;
 			}
 			else {
 				tempAttackBB = getPawnAttackBoard<Us>(fromSQ) & enemys & MoveEnable;
@@ -826,7 +767,7 @@ public:
 		while (MoveBB) {
 			fromSQ = PopBit(&MoveBB);
 			if (PinnedPiecesBB & SetMask[fromSQ]) {
-				tempAttackBB = PinBySquare[fromSQ]->blockingBB & magicGetBishopAttackBB(fromSQ, allPiecesBB) & MoveEnable;
+				tempAttackBB = PinBySquare[fromSQ].blockingBB & magicGetBishopAttackBB(fromSQ, allPiecesBB) & MoveEnable;
 			}
 			else {
 				tempAttackBB = magicGetBishopAttackBB(fromSQ, allPiecesBB) & MoveEnable;
@@ -865,7 +806,7 @@ public:
 		while (MoveBB) {
 			fromSQ = PopBit(&MoveBB);
 			if (PinnedPiecesBB & SetMask[fromSQ]) {
-				tempAttackBB = PinBySquare[fromSQ]->blockingBB & magicGetRookAttackBB(fromSQ, allPiecesBB) & MoveEnable;
+				tempAttackBB = PinBySquare[fromSQ].blockingBB & magicGetRookAttackBB(fromSQ, allPiecesBB) & MoveEnable;
 			}
 			else {
 				tempAttackBB = magicGetRookAttackBB(fromSQ, allPiecesBB) & MoveEnable;
@@ -904,7 +845,7 @@ public:
 		while (MoveBB) {
 			fromSQ = PopBit(&MoveBB);
 			if (PinnedPiecesBB & SetMask[fromSQ]) {
-				tempAttackBB = PinBySquare[fromSQ]->blockingBB & magicGetQueenAttackBB(fromSQ, allPiecesBB) & MoveEnable;
+				tempAttackBB = PinBySquare[fromSQ].blockingBB & magicGetQueenAttackBB(fromSQ, allPiecesBB) & MoveEnable;
 			}
 			else {
 				tempAttackBB = magicGetQueenAttackBB(fromSQ, allPiecesBB) & MoveEnable;
@@ -1141,21 +1082,61 @@ public:
 		}
 	}
 
+	void SetBoard(S_Splitpoint* pSplitpoint) {
+		PiecesBB[0] = pSplitpoint->PiecesBB[0];
+		PiecesBB[1] = pSplitpoint->PiecesBB[1];
+		PiecesBB[2] = pSplitpoint->PiecesBB[2];
+		PiecesBB[3] = pSplitpoint->PiecesBB[3];
+		PiecesBB[4] = pSplitpoint->PiecesBB[4];
+		PiecesBB[5] = pSplitpoint->PiecesBB[5];
+		PiecesBB[6] = pSplitpoint->PiecesBB[6];
+		PiecesBB[7] = pSplitpoint->PiecesBB[7];
+		PiecesBB[8] = pSplitpoint->PiecesBB[8];
+		PiecesBB[9] = pSplitpoint->PiecesBB[9];
+		PiecesBB[10] = pSplitpoint->PiecesBB[10];
+		PiecesBB[11] = pSplitpoint->PiecesBB[11];
+		CastlePerm = pSplitpoint->CastlePerm;
+		EnPas = pSplitpoint->EnPas;
+		FiftyMove = pSplitpoint->FiftyMove;
+		PosKey = pSplitpoint->PosKey;
+		Side = pSplitpoint->Side;
+		HisPly = Ply = 0;
+	}
+	void setSplitpoint(S_Splitpoint* pSplitpoint) {
+		pSplitpoint->PiecesBB[0] = PiecesBB[0];
+		pSplitpoint->PiecesBB[1] = PiecesBB[1];
+		pSplitpoint->PiecesBB[2] = PiecesBB[2];
+		pSplitpoint->PiecesBB[3] = PiecesBB[3];
+		pSplitpoint->PiecesBB[4] = PiecesBB[4];
+		pSplitpoint->PiecesBB[5] = PiecesBB[5];
+		pSplitpoint->PiecesBB[6] = PiecesBB[6];
+		pSplitpoint->PiecesBB[7] = PiecesBB[7];
+		pSplitpoint->PiecesBB[8] = PiecesBB[8];
+		pSplitpoint->PiecesBB[9] = PiecesBB[9];
+		pSplitpoint->PiecesBB[10] = PiecesBB[10];
+		pSplitpoint->PiecesBB[11] = PiecesBB[11];
+		pSplitpoint->CastlePerm = CastlePerm;
+		pSplitpoint->EnPas = EnPas;
+		pSplitpoint->FiftyMove = FiftyMove;
+		pSplitpoint->PosKey = PosKey;
+		pSplitpoint->Side = Side;
+	}
 private:
 	char fen_line[256] = "                                                                                                                                                                                                                                                               ";
 
 	S_MemoryFrame MemoryFrame;
 	MemoryBlock* pMemory;
+
 	short Side = BLACK;
 	short EnPas = NO_SQ;
 	short FiftyMove = 0;
 	short CastlePerm = 0;
-	U64 * PiecesBB = nullptr;
+	U64 PiecesBB[12];
 	U64 PosKey = 0ULL;
 
 	short Ply = 0;
 	short HisPly = 0;
-	U64 * History = nullptr;
+	U64 History[GAME_MAX_MOVES];
 
 	inline void NewPiece(const short Type, const short SQ) { 
 		SetBit(&PiecesBB[Type], SQ); 
@@ -1193,7 +1174,7 @@ private:
 	short myKingSQ = NO_SQ;
 	U64 myKingBB = 0ULL;
 
-	S_PinnedPiece ** PinBySquare = nullptr;
+	S_PinnedPiece PinBySquare[64];
 	U64 PinnedPiecesBB = 0ULL;
 
 	U64 allPiecesBB = 0ULL;
@@ -1437,17 +1418,15 @@ private:
 			U64 newAttackBB = magicGetBishopAttackBB(attack_sq, allPiecesBB) & enemys & getRay(pinDir, attack_sq);
 
 			if (newAttackBB & (PiecesBB[enBISHOP] | PiecesBB[enQUEEN])) {
-				S_PinnedPiece* temp = (S_PinnedPiece*)pMemory->AllocFrameMemory(sizeof(S_PinnedPiece));
+				S_PinnedPiece* temp = &PinBySquare[fromSQ];
 
 				temp->absolutePin = Absolute;
 				temp->attack_sq = attack_sq;
 				temp->pinner_sq = PopBit(&newAttackBB);
 				temp->blockingBB = (getRay(pinDir, attack_sq) & getRay(getOppositeDir(pinDir), temp->pinner_sq) & ClearMask[fromSQ]) | SetMask[temp->pinner_sq];
 
-				temp->next = PinBySquare[fromSQ];
-				PinBySquare[fromSQ] = temp;
-
 				PinnedPiecesBB |= SetMask[fromSQ];
+
 			}
 
 			SetBit(&allPiecesBB, fromSQ);
@@ -1460,15 +1439,12 @@ private:
 			U64 newAttackBB = magicGetRookAttackBB(attack_sq, allPiecesBB) & enemys & getRay(pinDir, attack_sq);
 
 			if (newAttackBB & (PiecesBB[enROOK] | PiecesBB[enQUEEN])) {
-				S_PinnedPiece* temp = (S_PinnedPiece*)pMemory->AllocFrameMemory(sizeof(S_PinnedPiece));
+				S_PinnedPiece* temp = &PinBySquare[fromSQ];
 
 				temp->absolutePin = Absolute;
 				temp->attack_sq = attack_sq;
 				temp->pinner_sq = PopBit(&newAttackBB);
 				temp->blockingBB = (getRay(pinDir, attack_sq) & getRay(getOppositeDir(pinDir), temp->pinner_sq) & ClearMask[fromSQ]) | SetMask[temp->pinner_sq];
-
-				temp->next = PinBySquare[fromSQ];
-				PinBySquare[fromSQ] = temp;
 
 				PinnedPiecesBB |= SetMask[fromSQ];
 			}

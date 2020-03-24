@@ -1,6 +1,5 @@
 #include <iostream>
 #include "UCI.h"
-
 int main()
 {
 	/*
@@ -26,7 +25,5 @@ int main()
 		std::cout << (i + 1) << ": " << field_names[MOVE_FROMSQ(MovePtr[i].Move)] << field_names[MOVE_TOSQ(MovePtr[i].Move)] << " \n-  Mode: " << getModeName(MOVE_MODE(MovePtr[i].Move)) << " \n-  Moved: " << getPieceName(MOVE_MOVED(MovePtr[i].Move)) << " \n-  Captured: " << getPieceName(MOVE_CAPTURED(MovePtr[i].Move)) << " \n-  Promoted: " << getPieceName(MOVE_PROMOTED(MovePtr[i].Move)) << std::endl;
 	}
 	*/
-
-
 	(new UCI())->uci_loop();
 }

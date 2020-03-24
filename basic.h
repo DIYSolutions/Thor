@@ -10,8 +10,8 @@ constexpr int SEARCH_MAX_MOVES = 512;
 constexpr int GAME_MAX_MOVES = 2048;
 constexpr int BOARD_MAX_MOVES = 256;
 constexpr int CONTAINER_MAX_MOVES = BOARD_MAX_MOVES * SEARCH_MAX_MOVES;
-constexpr int MAX_THREAD = 128;
-constexpr int STD_THREAD = 1;
+constexpr int MAX_THREAD = 256;
+constexpr int STD_THREAD = 16;
 constexpr int STD_HASHTABLE_MB = 64;// size in MB
 constexpr int MAX_HASHTABLE_MB = 64 * 1024;// size in MB
 constexpr int THREAD_MEMORY_MB = 3;// size in MB
@@ -73,6 +73,7 @@ void print_console_str(const char* line, char* str);
 void PrintBitboard(U64 bb);
 void print_search_info(const BoardValue Score, const short Depth, U64 nodes, U64 timems);
 U64 perft_check(const short depth, char* fen);
+void perft_fill_array(short depth, U64* depth_num, char* fen);
 #include <chrono>
 inline U64 GetMilliTime() {
 	using namespace std::chrono;
@@ -167,7 +168,12 @@ typedef struct S_PinnedPiece {
 	short attack_sq = NO_SQ;
 	U64 blockingBB = 0ULL;
 	bool absolutePin = false;
-	S_PinnedPiece* next = nullptr;
 } S_PinnedPiece;
 
 constexpr U64 NOMOVE = 0ULL;
+
+
+
+
+class ThreadManager;
+static ThreadManager* thread_manager;

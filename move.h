@@ -473,3 +473,52 @@ char* PrMove(const U64 move) {
 
 	return MvStr;
 }
+
+
+
+class Thread;
+
+typedef struct S_Threadlist {
+	Thread* current = nullptr;
+	S_Threadlist* next = nullptr;
+	S_Threadlist* last = nullptr;
+} S_Threadlist;
+
+typedef struct S_Splitpoint {
+	/* board vars */
+	short Side = BLACK;
+	short EnPas = NO_SQ;
+	short FiftyMove = 0;
+	short CastlePerm = 0;
+	U64 PiecesBB[12];
+	U64 PosKey = 0ULL;
+
+	/* search vars */
+	U64 Nodes = 0ULL;
+	std::atomic<short> searched = 0;
+	short Depth = 0;
+	BoardValue Alpha = MIN_INFINTE;
+	BoardValue Beta = MAX_INFINTE;
+
+	S_MOVELIST Moves;
+
+	Thread* Master = nullptr;
+	S_Threadlist Slaves_RootNode;
+	std::atomic<short> SlaveCount = 0;
+	std::atomic_flag lock;
+
+	short Mode;
+} S_Splitpoint;
+
+typedef struct S_SplitpointMessage {
+	S_Splitpoint* pSplitpoint;
+	short MoveNr;
+	S_SplitpointMessage(S_Splitpoint* _pSplitpoint, short _MoveNr) {
+		pSplitpoint = _pSplitpoint;
+		MoveNr = _MoveNr;
+	}
+	S_SplitpointMessage(void) {
+		pSplitpoint = nullptr;
+		MoveNr = 0;
+	}
+} S_SplitpointMessage;

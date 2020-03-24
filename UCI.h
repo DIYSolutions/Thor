@@ -1,7 +1,7 @@
 #pragma once
 #include "hash.h"
-#include "ChessThreadManager.h"
 #include "perfttest.h"
+#include "ThreadManager.h"
 
 #define INPUTBUFFER 400 * 6
 
@@ -10,22 +10,13 @@ class UCI
 public:
 	UCI() {
 		InitOutputLock();
-		InitMessageContainer();
-		InitSearchinfo();
-		Message = MESSENGER;
-
-		pTaskManager = new ChessThreadManager();
-		if (!_InitFrameMemorySystem<FrameInit>(MemorySize, 4))
-			error_exit("UCI: _InitFrameMemorySystem<FrameInit> failed!");
-
+		InitSearchinfo();		
 		init();
 	}
-
 	void uci_loop(void) {
 		setvbuf(stdin, NULL, _IOFBF , INPUTBUFFER);
 		setvbuf(stdout, NULL, _IOFBF , INPUTBUFFER);
 
-		char line[INPUTBUFFER];
 		std::cout << "id name " << ENGINE_NAME << std::endl;
 		std::cout << "id author " << ENGINE_AUTHOR << std::endl;
 		std::cout << "option name Threads type spin default 1 min 1 max " << MAX_THREAD << std::endl;
@@ -33,8 +24,13 @@ public:
 		std::cout << "option name Book type check default false" << std::endl;
 		std::cout << "uciok" << std::endl;
 
-		int MB = STD_HASHTABLE_MB;
-		int T = STD_THREAD;
+		while (uci_loop(MemoryHashMB, ThreadNum));
+	}
+
+	bool uci_loop(int _MB, int _T) {
+		char line[INPUTBUFFER];
+		int MB = _MB;
+		int T = _T;
 		int D = 0;
 		while (true) {
 			memset(&line[0], 0, sizeof(line));
@@ -73,7 +69,12 @@ public:
 			else if (!strncmp(line, "perfttest ", 10)) {
 				sscanf_s(line, "%*s %d", &D);
 				print_console("starting perft test(depth=%d)", D);
-				perfttest(pMemory, pChessboard, D);
+				perfttest(pMemory, pChessboard, D, false);
+			}
+			else if (!strncmp(line, "multiperft ", 10)) {
+				sscanf_s(line, "%*s %d", &D);
+				print_console("starting perft test(depth=%d)", D);
+				perfttest(pMemory, pChessboard, D, true);
 			}
 			else if (!strncmp(line, "setoption name Threads value ", 29)) {
 				sscanf_s(line, "%*s %*s %*s %*s %d", &T);
@@ -82,6 +83,7 @@ public:
 
 				print_console("Set Threads to %d\n", T);
 				SetupThreadsAndMemory(getMemorySize(MB, T), T);
+				goto wait4threads;
 			}
 			else if (!strncmp(line, "setoption name Hash value ", 26)) {
 				sscanf_s(line, "%*s %*s %*s %*s %d", &MB);
@@ -89,6 +91,7 @@ public:
 				if (MB > MAX_HASHTABLE_MB) MB = MAX_HASHTABLE_MB;
 				print_console("Set Hash to %d MB\n", MB);
 				SetupThreadsAndMemory(getMemorySize(MB, ThreadNum), ThreadNum);
+				goto wait4threads;
 			}
 			else if (!strncmp(line, "setoption name Book value ", 26)) {
 				char* ptrTrue = nullptr;
@@ -108,26 +111,25 @@ public:
 			}
 
 		}
+		return false;
+	wait4threads:
+		return true;
 	}
 
 private:
-	short ThreadNum = STD_THREAD;
+	int ThreadNum = STD_THREAD;
+	int MemoryHashMB = STD_HASHTABLE_MB;
 	U64 MemorySize = getMemorySize(STD_HASHTABLE_MB, STD_THREAD);
-	ChessThreadManager* pTaskManager = nullptr;
 	Chessboard* pChessboard = nullptr;
 	MemoryBlock* pMemory = nullptr;
-	ChessThreadMessenger* Message = nullptr;
 	short SearchMode = 0;
-	
+	ThreadManager* pTaskManager;
 
 	inline void StartSearch(void) {
 		_pSearchInfo->fh = 0;
 		_pSearchInfo->fhf = 0;
 		_pSearchInfo->nodes = 0;
 		_pSearchInfo->nullCut = 0;
-		Message->putNewMessage(
-			pChessboard->GenThreadMessage(SearchMode, _pSearchInfo->depth)
-		);
 	}
 
 	void SetupThreadsAndMemory(const U64 _MemorySize, const short _ThreadNum) {
@@ -135,32 +137,26 @@ private:
 
 		ThreadNum = _ThreadNum;
 		MemorySize = _MemorySize;
-
-		if (!_InitFrameMemorySystem<FrameReInit>(MemorySize, 4))
-			error_exit("UCI: _InitFrameMemorySystem<FrameReInit> failed!");;
-
+		
 		init();
 	}
 
 	void shutdown(void) {
-		pTaskManager->Shutdown();
+		delete pTaskManager;
 		destroyHashTable();		
 		delete pChessboard;
 		delete pMemory;
 	}
-
+	
 	void init(void) {
-		pMemory = new MemoryBlock();
-		pMemory->init(THREAD_MEMORY_SIZE, ThreadHeap);
-		pChessboard = newChessboard(pMemory);
 		// init threads
-		pTaskManager->Startup(ThreadNum);
+		pTaskManager = new ThreadManager(ThreadNum);
+		thread_manager = pTaskManager;
+		pMemory = new MemoryBlock(THREAD_MEMORY_SIZE);
+		pChessboard = new Chessboard();
+		//pTaskManager->Startup(ThreadNum);
 		// init hash
-		InitHashTable(_GetFreeMemory());
-		if (ThreadNum > 1)
-			SearchMode = ThreadMainSearch;
-		else
-			SearchMode = ThreadAloneSearch;
+		InitHashTable(MemorySize - ((ThreadNum + 1) * THREAD_MEMORY_SIZE));
 	}
 
 

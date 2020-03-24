@@ -104,6 +104,10 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <OpenMPSupport>false</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,12 +136,17 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <OpenMPSupport>false</OpenMPSupport>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -156,14 +165,14 @@
     <ClInclude Include="bitboard_magic.h" />
     <ClInclude Include="bitboard_movegen.h" />
     <ClInclude Include="Chessboard.h" />
-    <ClInclude Include="ChessThread.h" />
-    <ClInclude Include="ChessThreadManager.h" />
-    <ClInclude Include="ChessThreadMessenger.h" />
     <ClInclude Include="hash.h" />
+    <ClInclude Include="List.h" />
     <ClInclude Include="MemoryBlock.h" />
     <ClInclude Include="memory_basic.h" />
     <ClInclude Include="move.h" />
     <ClInclude Include="perfttest.h" />
+    <ClInclude Include="Singleton.h" />
+    <ClInclude Include="ThreadManager.h" />
     <ClInclude Include="UCI.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

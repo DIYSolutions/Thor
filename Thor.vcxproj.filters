@@ -53,16 +53,16 @@
     <ClInclude Include="UCI.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="ChessThread.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="ChessThreadManager.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="ChessThreadMessenger.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="perfttest.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="Singleton.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="ThreadManager.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="List.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

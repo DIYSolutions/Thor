@@ -180,3 +180,52 @@ U64 perft_check(const short depth, char* fen)
 	std::cout << "error!" << std::endl;
 	return 0;
 }
+
+void perft_fill_array(short depth, U64 * depth_num, char* fen)
+{
+	char psBuffer[128];
+	char read_line[128];
+	short rx = 0;
+	FILE* iopipe;
+	char cmd_line[256] = "C:\\Users\\Toto\\source\\repos\\DIYSolutions\\Thor\\x64\\Release\\perft ";
+	short x = 0, y = 0;
+	while (cmd_line[x] != 0)
+		x++;
+	if (depth == 10) {
+		cmd_line[x++] = '1';
+		cmd_line[x++] = '0';
+	}
+	else {
+		cmd_line[x++] = '0' + depth;
+	}
+	cmd_line[x++] = ' ';
+	cmd_line[x++] = '"';
+	while (fen[y] != 0)
+		cmd_line[x++] = fen[y++];
+	cmd_line[x++] = '"';
+	cmd_line[x++] = 0;
+	if ((iopipe = popen(cmd_line, "r")) == NULL)
+		exit(1);
+	U64 ret = 0ULL;
+	short _depth = 7;
+	while (!feof(iopipe))
+	{
+		if (fgets(psBuffer, 128, iopipe) != NULL) {
+			x = 0;
+			while (psBuffer[x] != 0) {
+				if (psBuffer[x] == '\n') {
+					read_line[rx] = 0;
+					ret = test_perft_line(_depth, read_line);
+					if (ret) {
+						depth_num[_depth-1] = ret;
+						_depth++;
+					}
+					rx = 0;
+					x++;
+				}
+				if (psBuffer[x] != 0)
+					read_line[rx++] = psBuffer[x++];
+			}
+		}
+	}
+}

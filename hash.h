@@ -84,7 +84,6 @@ typedef struct {
 
 static S_HASHTABLE* _pHashTable = nullptr;
 static S_SEARCHINFO* _pSearchInfo = nullptr;
-static S_MemoryFrame _MemoryFrame;
 
 typedef enum HashFlags {
 	HFNONE, HFALPHA, HFBETA, HFEXACT
@@ -234,7 +233,7 @@ inline void InitSearchinfo() {
 inline void destroyHashTable() {
 	if (_pHashTable != nullptr) {
 		if (_pHashTable->entrys != nullptr) {
-			_ReleaseMemoryFrame(&_MemoryFrame);
+			free(_pHashTable->entrys);
 		}
 		delete _pHashTable;
 		delete _pSearchInfo;
@@ -250,8 +249,7 @@ inline void InitHashTable(const U64 HashSize) {
 	_pHashTable->numEntries = HashSize / sizeof(S_HASHENTRY);
 	_pHashTable->numEntries -= 2;
 
-	_MemoryFrame = _GetMemoryFrame(HashHeap);
-	_pHashTable->entrys = (S_HASHENTRY*)_AllocFrameMemory<HashHeap>(((int)_pHashTable->numEntries) * sizeof(S_HASHENTRY));
+	_pHashTable->entrys = (S_HASHENTRY*)malloc(((int)_pHashTable->numEntries) * sizeof(S_HASHENTRY));
 	if (_pHashTable->entrys == nullptr) {
 		print_console("Hash Allocation Failed, trying %dBytes...\n", HashSize / 2);
 		InitHashTable(HashSize / 2);
